@@ -23,6 +23,7 @@ import type { Product, Category, InventoryMovement, Location, User as StaffUser 
 import { db } from '@/lib/db';
 import { adjustStock } from '@/lib/services/inventoryService';
 import { sound } from '@/lib/audio';
+import { BulkImportModal } from './BulkImportModal';
 
 interface InventoryViewProps {
   products: Product[];
@@ -46,6 +47,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [onlyLowStock, setOnlyLowStock] = useState(false);
   const [stockFilter, setStockFilter] = useState<'ALL' | 'BELOW_THRESHOLD' | 'OUT_OF_STOCK' | 'LOW_STOCK' | 'HEALTHY'>('ALL');
   const [isAlertBannerDismissed, setIsAlertBannerDismissed] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   // Automated Low Stock Statistics Calculation
   const lowStockStats = useMemo(() => {
@@ -221,16 +223,30 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            sound.playClick();
-            setIsNewProductModal(true);
-          }}
-          className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-xs font-bold text-white transition flex items-center gap-2 shadow-md shadow-sky-950"
-        >
-          <Plus className="w-4 h-4" />
-          Add Catalog Product
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            id="bulk-import-csv-btn"
+            onClick={() => {
+              sound.playClick();
+              setIsBulkImportOpen(true);
+            }}
+            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 hover:text-white transition flex items-center gap-2 shadow-xs"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <span>Bulk CSV Import</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playClick();
+              setIsNewProductModal(true);
+            }}
+            className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-xs font-bold text-white transition flex items-center gap-2 shadow-md shadow-sky-950"
+          >
+            <Plus className="w-4 h-4" />
+            Add Catalog Product
+          </button>
+        </div>
       </div>
 
       {/* Automated Low-Stock Alerting Banner */}
@@ -975,6 +991,19 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           </form>
         </div>
       )}
+
+      {/* Bulk Inventory CSV Import Modal */}
+      <BulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        products={products}
+        categories={categories}
+        currentLocation={currentLocation}
+        currentUser={currentUser}
+        onSuccess={async () => {
+          await onRefreshData();
+        }}
+      />
     </div>
   );
 };
