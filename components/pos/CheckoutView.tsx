@@ -32,12 +32,15 @@ import type {
 } from '@/lib/types';
 import { sound } from '@/lib/audio';
 import { completeSale, holdCurrentOrder, deleteHeldOrder } from '@/lib/services/posService';
+import { db } from '@/lib/db';
 import { ModifierModal } from './ModifierModal';
 import { ScannerModal } from './ScannerModal';
 import { PaymentModal } from './PaymentModal';
 import { ReceiptModal } from './ReceiptModal';
 import { HeldOrdersDrawer } from './HeldOrdersDrawer';
 import { CustomerSelectModal } from './CustomerSelectModal';
+import { QuickActionsFloatingMenu } from './QuickActionsFloatingMenu';
+import { QuickReturnModal } from './QuickReturnModal';
 
 interface CheckoutViewProps {
   products: Product[];
@@ -79,6 +82,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [isHeldDrawerOpen, setIsHeldDrawerOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isQuickReturnOpen, setIsQuickReturnOpen] = useState(false);
+  const [quickNotice, setQuickNotice] = useState<string | null>(null);
   const [lastCompletedSale, setLastCompletedSale] = useState<Sale | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -270,6 +275,56 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     deleteHeldOrder(order.id);
     setIsHeldDrawerOpen(false);
     onRefreshData();
+  };
+
+  // Quick Actions: Print last receipt (from state or local Dexie database)
+  const handlePrintLastReceipt = async () => {
+    sound.playClick();
+    let targetSale = lastCompletedSale;
+    if (!targetSale) {
+      try {
+        const recent = await db.sales
+          .where('locationId')
+          .equals(currentLocation.id)
+          .reverse()
+          .sortBy('createdAt');
+        targetSale = recent[0] || (await db.sales.orderBy('createdAt').reverse().first()) || null;
+      } catch (err) {
+        console.error('[CheckoutView] Failed to retrieve last sale:', err);
+      }
+    }
+
+    if (targetSale) {
+      setLastCompletedSale(targetSale);
+      setIsReceiptOpen(true);
+    } else {
+      sound.playError();
+      setQuickNotice('No completed sales found on this register to print receipt.');
+      setTimeout(() => setQuickNotice(null), 3500);
+    }
+  };
+
+  // Quick Actions: Kick cash drawer on no-sale
+  const handleDrawerNoSale = async () => {
+    sound.playSaleSuccess();
+    setQuickNotice('Cash drawer opened (No-Sale kick logged to audit trail)');
+    setTimeout(() => setQuickNotice(null), 3500);
+
+    try {
+      await db.auditEvents.add({
+        id: `aud_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        actorId: currentUser.id,
+        actorName: currentUser.name,
+        action: 'DRAWER_KICK_NO_SALE',
+        entityType: 'REGISTER',
+        entityId: currentRegister.id,
+        details: `Cashier ${currentUser.name} triggered No-Sale drawer kick on ${currentRegister.name}`,
+        locationId: currentLocation.id,
+      });
+    } catch (err) {
+      console.error('[CheckoutView] Audit event logging failed:', err);
+    }
   };
 
   const handleHoldOrderRef = useRef(handleHoldOrder);
@@ -823,6 +878,56 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
           setLastCompletedSale(null);
         }}
       />
+
+      {/* Quick Return Modal */}
+      <QuickReturnModal
+        isOpen={isQuickReturnOpen}
+        onClose={() => setIsQuickReturnOpen(false)}
+        currentLocation={currentLocation}
+        currentUser={currentUser}
+        onSuccess={async (refundedSale) => {
+          await onRefreshData();
+        }}
+        onViewReceipt={(sale) => {
+          setLastCompletedSale(sale);
+          setIsReceiptOpen(true);
+        }}
+      />
+
+      {/* Floating Quick Actions Speed-Dial Menu */}
+      <QuickActionsFloatingMenu
+        onHoldOrder={handleHoldOrder}
+        canHoldOrder={cartItems.length > 0}
+        heldOrdersCount={heldOrders.length}
+        onOpenHeldOrders={() => setIsHeldDrawerOpen(true)}
+        onPrintLastReceipt={handlePrintLastReceipt}
+        lastCompletedSaleNumber={lastCompletedSale?.orderNumber}
+        onStartReturn={() => setIsQuickReturnOpen(true)}
+        onOpenScanner={() => setIsScannerOpen(true)}
+        onClearCart={() => {
+          sound.playClick();
+          setCartItems([]);
+          setSelectedCustomer(undefined);
+          setWholeCartDiscountPercent(0);
+        }}
+        canClearCart={cartItems.length > 0}
+        onOpenDrawerNoSale={handleDrawerNoSale}
+        cartItemsCount={cartItems.length}
+        currencySymbol={currentLocation.currencySymbol}
+        grandTotal={grandTotal}
+        registerName={currentRegister.name}
+      />
+
+      {/* Temporary Floating Quick Notice Toast */}
+      {quickNotice && (
+        <div
+          id="checkout-quick-notice-toast"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-slate-700 text-white text-xs font-semibold shadow-2xl backdrop-blur-md flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150"
+        >
+          <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+          <span>{quickNotice}</span>
+        </div>
+      )}
     </div>
   );
 };
