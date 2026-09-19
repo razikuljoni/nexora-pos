@@ -18,17 +18,21 @@ import {
   TrendingDown,
   Layers,
   ArrowUpRight,
+  Flame,
 } from 'lucide-react';
-import type { Product, Category, InventoryMovement, Location, User as StaffUser } from '@/lib/types';
+import type { Product, Category, InventoryMovement, Location, Sale, User as StaffUser } from '@/lib/types';
 import { db } from '@/lib/db';
 import { adjustStock } from '@/lib/services/inventoryService';
 import { sound } from '@/lib/audio';
 import { BulkImportModal } from './BulkImportModal';
+import { LocationHeatmap } from './LocationHeatmap';
 
 interface InventoryViewProps {
   products: Product[];
   categories: Category[];
   movements: InventoryMovement[];
+  locations?: Location[];
+  sales?: Sale[];
   currentLocation: Location;
   currentUser: StaffUser;
   onRefreshData: () => Promise<void>;
@@ -38,6 +42,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   products,
   categories,
   movements,
+  locations = [],
+  sales = [],
   currentLocation,
   currentUser,
   onRefreshData,
@@ -48,6 +54,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [stockFilter, setStockFilter] = useState<'ALL' | 'BELOW_THRESHOLD' | 'OUT_OF_STOCK' | 'LOW_STOCK' | 'HEALTHY'>('ALL');
   const [isAlertBannerDismissed, setIsAlertBannerDismissed] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [showLocationHeatmap, setShowLocationHeatmap] = useState(true);
 
   // Automated Low Stock Statistics Calculation
   const lowStockStats = useMemo(() => {
@@ -225,6 +232,22 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
+            id="toggle-location-heatmap-btn"
+            onClick={() => {
+              sound.playClick();
+              setShowLocationHeatmap(prev => !prev);
+            }}
+            className={`px-4 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition shadow-xs ${
+              showLocationHeatmap
+                ? 'bg-amber-600/20 border-amber-500/40 text-amber-300'
+                : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+            }`}
+          >
+            <Flame className="w-4 h-4 text-amber-400" />
+            <span>{showLocationHeatmap ? 'Hide Heatmap' : 'Location Heatmap'}</span>
+          </button>
+
+          <button
             id="bulk-import-csv-btn"
             onClick={() => {
               sound.playClick();
@@ -315,6 +338,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Interactive Multi-Location Stock Consumption Heatmap (Recharts) */}
+      {showLocationHeatmap && (
+        <LocationHeatmap
+          products={products}
+          categories={categories}
+          locations={locations}
+          sales={sales}
+          movements={movements}
+          currencySymbol={currentLocation.currencySymbol}
+        />
       )}
 
       {/* Automated Stock Status KPI Cards */}

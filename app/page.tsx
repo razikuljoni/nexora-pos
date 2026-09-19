@@ -487,6 +487,8 @@ export default function NexoraPOSApp() {
             products={products}
             categories={categories}
             movements={inventoryMovements}
+            locations={locations}
+            sales={sales}
             currentLocation={currentLocation}
             currentUser={currentUser}
             onRefreshData={refreshData}
