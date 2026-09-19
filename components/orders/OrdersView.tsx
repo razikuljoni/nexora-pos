@@ -12,11 +12,14 @@ import {
   CreditCard,
   Banknote,
   Smartphone,
+  TrendingUp,
+  BarChart3,
 } from 'lucide-react';
 import type { Sale, Location, User as StaffUser } from '@/lib/types';
 import { processRefund } from '@/lib/services/posService';
 import { sound } from '@/lib/audio';
 import { ReceiptModal } from '../pos/ReceiptModal';
+import { SalesVolumeChart } from './SalesVolumeChart';
 
 interface OrdersViewProps {
   sales: Sale[];
@@ -34,6 +37,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const [search, setSearch] = useState('');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
+  const [showSalesChart, setShowSalesChart] = useState(true);
 
   // Refund Modal State
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
@@ -118,10 +122,33 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             Transactions & Order History
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Search completed orders, issue item refunds, and re-print 80mm thermal receipts.
+            Search completed orders, analyze 7-day sales velocity, issue item refunds, and re-print 80mm thermal receipts.
           </p>
         </div>
+
+        <button
+          onClick={() => {
+            sound.playClick();
+            setShowSalesChart(prev => !prev);
+          }}
+          className={`px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition ${
+            showSalesChart
+              ? 'bg-sky-600/20 border-sky-500/40 text-sky-300'
+              : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          <span>{showSalesChart ? 'Hide Performance Chart' : 'Show 7-Day Performance'}</span>
+        </button>
       </div>
+
+      {/* 7-Day Sales Volume Performance Chart (Recharts) */}
+      {showSalesChart && (
+        <SalesVolumeChart
+          sales={sales}
+          currencySymbol={currentLocation.currencySymbol}
+        />
+      )}
 
       {/* Search Bar */}
       <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl">
