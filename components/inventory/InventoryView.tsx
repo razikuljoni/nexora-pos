@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Package,
   Search,
@@ -8,10 +8,16 @@ import {
   ArrowUpDown,
   History,
   AlertTriangle,
+  AlertOctagon,
   FileSpreadsheet,
   X,
   Check,
+  CheckCircle2,
   Filter,
+  ShieldAlert,
+  TrendingDown,
+  Layers,
+  ArrowUpRight,
 } from 'lucide-react';
 import type { Product, Category, InventoryMovement, Location, User as StaffUser } from '@/lib/types';
 import { db } from '@/lib/db';
@@ -38,6 +44,36 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [onlyLowStock, setOnlyLowStock] = useState(false);
+  const [stockFilter, setStockFilter] = useState<'ALL' | 'BELOW_THRESHOLD' | 'OUT_OF_STOCK' | 'LOW_STOCK' | 'HEALTHY'>('ALL');
+  const [isAlertBannerDismissed, setIsAlertBannerDismissed] = useState(false);
+
+  // Automated Low Stock Statistics Calculation
+  const lowStockStats = useMemo(() => {
+    let outOfStock = 0;
+    let lowStock = 0;
+    let healthy = 0;
+    let totalDeficit = 0;
+
+    products.forEach(p => {
+      if (p.stockQuantity <= 0) {
+        outOfStock++;
+        totalDeficit += Math.max(1, p.minStockLevel);
+      } else if (p.stockQuantity <= p.minStockLevel) {
+        lowStock++;
+        totalDeficit += p.minStockLevel - p.stockQuantity;
+      } else {
+        healthy++;
+      }
+    });
+
+    return {
+      outOfStock,
+      lowStock,
+      healthy,
+      totalBelowThreshold: outOfStock + lowStock,
+      totalDeficit,
+    };
+  }, [products]);
 
   // Modals & Drawers
   const [ledgerProduct, setLedgerProduct] = useState<Product | null>(null);
@@ -57,18 +93,32 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [newMinStock, setNewMinStock] = useState('5');
   const [newUnit, setNewUnit] = useState('piece');
 
-  const filteredProducts = products.filter(p => {
-    if (onlyLowStock && p.stockQuantity > p.minStockLevel) return false;
-    if (selectedCategory !== 'ALL' && p.categoryId !== selectedCategory) return false;
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(q) ||
-      p.sku.toLowerCase().includes(q) ||
-      p.barcode.includes(q) ||
-      (p.brand && p.brand.toLowerCase().includes(q))
-    );
-  });
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      if (stockFilter === 'BELOW_THRESHOLD' && p.stockQuantity > p.minStockLevel) return false;
+      if (stockFilter === 'OUT_OF_STOCK' && p.stockQuantity > 0) return false;
+      if (stockFilter === 'LOW_STOCK' && (p.stockQuantity <= 0 || p.stockQuantity > p.minStockLevel)) return false;
+      if (stockFilter === 'HEALTHY' && p.stockQuantity <= p.minStockLevel) return false;
+      if (onlyLowStock && p.stockQuantity > p.minStockLevel) return false;
+      if (selectedCategory !== 'ALL' && p.categoryId !== selectedCategory) return false;
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        p.barcode.includes(q) ||
+        (p.brand && p.brand.toLowerCase().includes(q))
+      );
+    });
+  }, [products, stockFilter, onlyLowStock, selectedCategory, search]);
+
+  const handleOpenQuickRestock = (prod: Product) => {
+    sound.playClick();
+    setAdjustingProduct(prod);
+    const deficit = Math.max(1, prod.minStockLevel - prod.stockQuantity);
+    setAdjustQuantity(deficit);
+    setAdjustReason('Safety threshold replenishment');
+  };
 
   // Handle stock adjustment
   const handleConfirmAdjustment = async (e: React.FormEvent) => {
@@ -167,7 +217,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             Inventory & Stock Ledger
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Explainable stock movements, live valuation, cycle counts, and immutable ledger auditing.
+            Explainable stock movements, live valuation, cycle counts, automated safety threshold alerting, and immutable ledger auditing.
           </p>
         </div>
 
@@ -180,6 +230,163 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         >
           <Plus className="w-4 h-4" />
           Add Catalog Product
+        </button>
+      </div>
+
+      {/* Automated Low-Stock Alerting Banner */}
+      {lowStockStats.totalBelowThreshold > 0 && !isAlertBannerDismissed && (
+        <div
+          id="inventory-low-stock-alert-banner"
+          className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-slate-900 border border-amber-500/30 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in duration-200"
+        >
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0 mt-0.5">
+              <ShieldAlert className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <span>Automated Stock Alert:</span>
+                  <span className="text-amber-300">
+                    {lowStockStats.totalBelowThreshold} Product{lowStockStats.totalBelowThreshold > 1 ? 's' : ''} Below Safety Threshold
+                  </span>
+                </h3>
+                {lowStockStats.outOfStock > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 inline-flex items-center gap-1">
+                    <AlertOctagon className="w-3 h-3 text-rose-400" />
+                    {lowStockStats.outOfStock} Critical
+                  </span>
+                )}
+                {lowStockStats.lowStock > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 inline-flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 text-amber-400" />
+                    {lowStockStats.lowStock} Low Warning
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Automated monitoring has flagged inventory deficits. A total of{' '}
+                <strong className="text-amber-300 font-mono font-bold">{lowStockStats.totalDeficit} units</strong>{' '}
+                are required across affected items to restore healthy baseline safety buffers.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+            <button
+              id="filter-below-threshold-btn"
+              onClick={() => {
+                sound.playClick();
+                setStockFilter(stockFilter === 'BELOW_THRESHOLD' ? 'ALL' : 'BELOW_THRESHOLD');
+              }}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs ${
+                stockFilter === 'BELOW_THRESHOLD'
+                  ? 'bg-amber-500 text-slate-950 shadow-amber-950 font-black'
+                  : 'bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200'
+              }`}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              <span>{stockFilter === 'BELOW_THRESHOLD' ? 'Showing Depleted SKUs' : 'Filter Alerted SKUs'}</span>
+            </button>
+
+            <button
+              onClick={() => setIsAlertBannerDismissed(true)}
+              className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
+              title="Dismiss warning banner"
+              aria-label="Dismiss alert banner"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Automated Stock Status KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {/* Total Catalog */}
+        <button
+          onClick={() => {
+            sound.playClick();
+            setStockFilter('ALL');
+          }}
+          className={`p-4 rounded-2xl border text-left transition ${
+            stockFilter === 'ALL'
+              ? 'bg-sky-950/40 border-sky-500/50 shadow-md shadow-sky-950'
+              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between text-slate-400 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider">Total SKUs</span>
+            <Layers className="w-4 h-4 text-sky-400" />
+          </div>
+          <div className="text-2xl font-black font-mono text-white">{products.length}</div>
+          <div className="text-[11px] text-slate-400 mt-1">Active catalog products</div>
+        </button>
+
+        {/* Healthy Range */}
+        <button
+          onClick={() => {
+            sound.playClick();
+            setStockFilter(stockFilter === 'HEALTHY' ? 'ALL' : 'HEALTHY');
+          }}
+          className={`p-4 rounded-2xl border text-left transition ${
+            stockFilter === 'HEALTHY'
+              ? 'bg-emerald-950/40 border-emerald-500/50 shadow-md shadow-emerald-950'
+              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between text-slate-400 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">In Safety Range</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div className="text-2xl font-black font-mono text-emerald-400">{lowStockStats.healthy}</div>
+          <div className="text-[11px] text-slate-400 mt-1">Adequate buffer levels</div>
+        </button>
+
+        {/* Low Stock Warning */}
+        <button
+          id="kpi-low-stock-warning"
+          onClick={() => {
+            sound.playClick();
+            setStockFilter(stockFilter === 'LOW_STOCK' ? 'ALL' : 'LOW_STOCK');
+          }}
+          className={`p-4 rounded-2xl border text-left transition ${
+            stockFilter === 'LOW_STOCK'
+              ? 'bg-amber-950/40 border-amber-500/60 shadow-md shadow-amber-950'
+              : lowStockStats.lowStock > 0
+              ? 'bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50'
+              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between text-slate-400 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Low Stock Warning</span>
+            <AlertTriangle className="w-4 h-4 text-amber-400" />
+          </div>
+          <div className="text-2xl font-black font-mono text-amber-400">{lowStockStats.lowStock}</div>
+          <div className="text-[11px] text-amber-300/80 mt-1">Below safety threshold</div>
+        </button>
+
+        {/* Out of Stock Critical */}
+        <button
+          id="kpi-out-of-stock"
+          onClick={() => {
+            sound.playClick();
+            setStockFilter(stockFilter === 'OUT_OF_STOCK' ? 'ALL' : 'OUT_OF_STOCK');
+          }}
+          className={`p-4 rounded-2xl border text-left transition ${
+            stockFilter === 'OUT_OF_STOCK'
+              ? 'bg-rose-950/40 border-rose-500/60 shadow-md shadow-rose-950'
+              : lowStockStats.outOfStock > 0
+              ? 'bg-rose-500/10 border-rose-500/30 hover:border-rose-500/50'
+              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between text-slate-400 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-400">Critical Depleted</span>
+            <AlertOctagon className={`w-4 h-4 text-rose-400 ${lowStockStats.outOfStock > 0 ? 'animate-pulse' : ''}`} />
+          </div>
+          <div className="text-2xl font-black font-mono text-rose-400">{lowStockStats.outOfStock}</div>
+          <div className="text-[11px] text-rose-300/80 mt-1">Zero stock on hand</div>
         </button>
       </div>
 
@@ -210,103 +417,226 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           ))}
         </select>
 
-        {/* Low stock toggle button */}
+        {/* Active Stock Filter Selector */}
+        <select
+          value={stockFilter}
+          onChange={e => {
+            sound.playClick();
+            setStockFilter(e.target.value as any);
+          }}
+          className={`border rounded-xl px-3 py-2 text-xs font-semibold focus:outline-hidden transition ${
+            stockFilter !== 'ALL'
+              ? 'bg-amber-500/20 border-amber-500/60 text-amber-200'
+              : 'bg-slate-950 border-slate-700 text-slate-300'
+          }`}
+        >
+          <option value="ALL">Stock Status: All Products</option>
+          <option value="BELOW_THRESHOLD">⚠️ All Below Threshold ({lowStockStats.totalBelowThreshold})</option>
+          <option value="LOW_STOCK">🟡 Low Stock Warning ({lowStockStats.lowStock})</option>
+          <option value="OUT_OF_STOCK">🔴 Critical Out of Stock ({lowStockStats.outOfStock})</option>
+          <option value="HEALTHY">🟢 In Safety Range ({lowStockStats.healthy})</option>
+        </select>
+
+        {/* Low stock toggle quick button */}
         <button
-          onClick={() => setOnlyLowStock(!onlyLowStock)}
-          className={`px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition ${
-            onlyLowStock
-              ? 'bg-rose-500/20 border-rose-500 text-rose-300'
+          onClick={() => {
+            sound.playClick();
+            setStockFilter(prev => (prev === 'BELOW_THRESHOLD' ? 'ALL' : 'BELOW_THRESHOLD'));
+          }}
+          className={`px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition shrink-0 ${
+            stockFilter === 'BELOW_THRESHOLD'
+              ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-xs'
               : 'bg-slate-950 border-slate-700 text-slate-400 hover:text-white'
           }`}
         >
           <AlertTriangle className="w-3.5 h-3.5" />
-          Low Stock Only
+          <span>Low Stock ({lowStockStats.totalBelowThreshold})</span>
         </button>
       </div>
 
       {/* Catalog Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950/70 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
               <tr>
                 <th className="p-3.5">SKU / Barcode</th>
                 <th className="p-3.5">Product Name</th>
-                <th className="p-3.5">Cost</th>
-                <th className="p-3.5">Selling Price</th>
-                <th className="p-3.5">Margin</th>
-                <th className="p-3.5">Stock Level</th>
+                <th className="p-3.5">Cost / Price</th>
+                <th className="p-3.5">Stock & Threshold Buffer</th>
+                <th className="p-3.5">Alert Warning Status</th>
                 <th className="p-3.5">Total Valuation</th>
                 <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {filteredProducts.map(prod => {
-                const isLow = prod.stockQuantity <= prod.minStockLevel;
-                const margin =
-                  prod.sellingPrice > 0
-                    ? (((prod.sellingPrice - prod.purchaseCost) / prod.sellingPrice) * 100).toFixed(1)
-                    : '0.0';
-                const valuation = (prod.stockQuantity * prod.purchaseCost).toFixed(2);
+              {filteredProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-slate-500">
+                    No products match the selected filters or search query.
+                  </td>
+                </tr>
+              ) : (
+                filteredProducts.map(prod => {
+                  const isOutOfStock = prod.stockQuantity <= 0;
+                  const isLow = prod.stockQuantity <= prod.minStockLevel;
+                  const margin =
+                    prod.sellingPrice > 0
+                      ? (((prod.sellingPrice - prod.purchaseCost) / prod.sellingPrice) * 100).toFixed(1)
+                      : '0.0';
+                  const valuation = (prod.stockQuantity * prod.purchaseCost).toFixed(2);
 
-                return (
-                  <tr key={prod.id} className="hover:bg-slate-800/40 transition">
-                    <td className="p-3.5 font-mono">
-                      <div className="font-bold text-white">{prod.sku}</div>
-                      <div className="text-[10px] text-slate-500">{prod.barcode}</div>
-                    </td>
-                    <td className="p-3.5">
-                      <div className="font-bold text-white text-xs">{prod.name}</div>
-                      <div className="text-[10px] text-slate-400">{prod.unit}</div>
-                    </td>
-                    <td className="p-3.5 font-mono text-slate-400">
-                      {currentLocation.currencySymbol}{prod.purchaseCost.toFixed(2)}
-                    </td>
-                    <td className="p-3.5 font-mono font-bold text-emerald-400">
-                      {currentLocation.currencySymbol}{prod.sellingPrice.toFixed(2)}
-                    </td>
-                    <td className="p-3.5 font-mono text-sky-400 font-medium">{margin}%</td>
-                    <td className="p-3.5 font-mono">
-                      <span
-                        className={`px-2 py-0.5 rounded-full font-bold text-[11px] inline-flex items-center gap-1 ${
-                          isLow
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                            : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-                        }`}
-                      >
-                        {isLow && <AlertTriangle className="w-3 h-3" />}
-                        {prod.stockQuantity} {prod.unit}s
-                      </span>
-                    </td>
-                    <td className="p-3.5 font-mono text-slate-300">
-                      {currentLocation.currencySymbol}{valuation}
-                    </td>
-                    <td className="p-3.5 text-right space-x-1.5">
-                      <button
-                        onClick={() => {
-                          sound.playClick();
-                          setAdjustingProduct(prod);
-                          setAdjustQuantity(0);
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-semibold transition"
-                      >
-                        Adjust
-                      </button>
-                      <button
-                        onClick={() => {
-                          sound.playClick();
-                          setLedgerProduct(prod);
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-[11px] font-semibold transition inline-flex items-center gap-1"
-                        title="Inspect Inventory Truth Ledger"
-                      >
-                        <History className="w-3 h-3" />
-                        Ledger
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                  // Buffer percentage for safety gauge
+                  const targetLevel = Math.max(1, prod.minStockLevel * 2);
+                  const safetyPct = Math.min(100, Math.max(0, Math.round((prod.stockQuantity / targetLevel) * 100)));
+
+                  return (
+                    <tr
+                      key={prod.id}
+                      className={`transition ${
+                        isOutOfStock
+                          ? 'bg-rose-950/20 border-l-4 border-l-rose-500 hover:bg-rose-950/30'
+                          : isLow
+                          ? 'bg-amber-950/20 border-l-4 border-l-amber-500 hover:bg-amber-950/30'
+                          : 'hover:bg-slate-800/40'
+                      }`}
+                    >
+                      {/* SKU / Barcode */}
+                      <td className="p-3.5 font-mono">
+                        <div className="font-bold text-white">{prod.sku}</div>
+                        <div className="text-[10px] text-slate-500">{prod.barcode}</div>
+                      </td>
+
+                      {/* Product Name */}
+                      <td className="p-3.5">
+                        <div className="font-bold text-white text-xs">{prod.name}</div>
+                        <div className="text-[10px] text-slate-400 capitalize">{prod.unit}s</div>
+                      </td>
+
+                      {/* Cost / Price */}
+                      <td className="p-3.5 font-mono">
+                        <div className="text-slate-400">
+                          {currentLocation.currencySymbol}{prod.purchaseCost.toFixed(2)} cost
+                        </div>
+                        <div className="font-bold text-emerald-400">
+                          {currentLocation.currencySymbol}{prod.sellingPrice.toFixed(2)} ({margin}%)
+                        </div>
+                      </td>
+
+                      {/* Stock & Threshold Buffer */}
+                      <td className="p-3.5 font-mono">
+                        <div className="flex items-center justify-between text-[11px] font-bold mb-1">
+                          <span className={isOutOfStock ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-white'}>
+                            {prod.stockQuantity} {prod.unit}s
+                          </span>
+                          <span className="text-slate-400 text-[10px] font-normal">
+                            Min Threshold: {prod.minStockLevel}
+                          </span>
+                        </div>
+
+                        {/* Safety Buffer Meter Bar */}
+                        <div className="w-36 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            style={{ width: `${safetyPct}%` }}
+                            className={`h-full transition-all duration-300 rounded-full ${
+                              isOutOfStock
+                                ? 'bg-rose-500'
+                                : isLow
+                                ? 'bg-amber-500'
+                                : 'bg-emerald-500'
+                            }`}
+                          />
+                        </div>
+
+                        {/* Deficit / Buffer indicator */}
+                        <div className="text-[9.5px] mt-0.5">
+                          {isOutOfStock ? (
+                            <span className="text-rose-400 font-bold">
+                              Deficit: -{prod.minStockLevel} {prod.unit}s below minimum
+                            </span>
+                          ) : isLow ? (
+                            <span className="text-amber-400 font-bold">
+                              Deficit: -{prod.minStockLevel - prod.stockQuantity} {prod.unit}s below minimum
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">
+                              Buffer: +{prod.stockQuantity - prod.minStockLevel} over minimum
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Alert Warning Status Column with Visual Warning Badge */}
+                      <td className="p-3.5">
+                        {isOutOfStock ? (
+                          <span
+                            id={`badge-out-of-stock-${prod.id}`}
+                            className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-flex items-center gap-1.5 shadow-xs shadow-rose-950/50"
+                          >
+                            <AlertOctagon className="w-3.5 h-3.5 text-rose-400 shrink-0 animate-pulse" />
+                            <span>CRITICAL OUT OF STOCK</span>
+                          </span>
+                        ) : isLow ? (
+                          <span
+                            id={`badge-low-stock-${prod.id}`}
+                            className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-flex items-center gap-1.5 shadow-xs shadow-amber-950/50"
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span>LOW STOCK WARNING</span>
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 inline-flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <span>IN SAFETY RANGE</span>
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Total Valuation */}
+                      <td className="p-3.5 font-mono text-slate-300">
+                        {currentLocation.currencySymbol}{valuation}
+                      </td>
+
+                      {/* Action buttons */}
+                      <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
+                        {isLow && (
+                          <button
+                            id={`quick-restock-btn-${prod.id}`}
+                            onClick={() => handleOpenQuickRestock(prod)}
+                            className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black transition inline-flex items-center gap-1 shadow-xs"
+                            title="Quick replenish up to safety threshold"
+                          >
+                            <ArrowUpRight className="w-3 h-3" />
+                            Restock
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            sound.playClick();
+                            setAdjustingProduct(prod);
+                            setAdjustQuantity(0);
+                            setAdjustReason('Cycle count recount');
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-semibold transition"
+                        >
+                          Adjust
+                        </button>
+                        <button
+                          onClick={() => {
+                            sound.playClick();
+                            setLedgerProduct(prod);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-[11px] font-semibold transition inline-flex items-center gap-1"
+                          title="Inspect Inventory Truth Ledger"
+                        >
+                          <History className="w-3 h-3" />
+                          Ledger
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
