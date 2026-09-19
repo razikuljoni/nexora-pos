@@ -1,0 +1,6 @@
+{
+  "name": "NEXORA POS",
+  "description": "Offline-first, multi-tenant, multi-location production POS PWA with explainable inventory and cash ledgers, sub-second checkout, and local sync resilience.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
