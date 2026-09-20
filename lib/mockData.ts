@@ -158,6 +158,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'RECIPE',
     preparationStation: 'BAR',
+    image: 'https://images.unsplash.com/photo-1577968897966-3d4325b36b61?w=600&auto=format&fit=crop&q=80',
     modifierGroups: [
       {
         id: 'mod_milk',
@@ -197,6 +198,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'RECIPE',
     preparationStation: 'BAR',
+    image: 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=600&auto=format&fit=crop&q=80',
     modifierGroups: [
       {
         id: 'mod_syrup',
@@ -226,6 +228,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'RECIPE',
     preparationStation: 'BAR',
+    image: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=600&auto=format&fit=crop&q=80',
     modifierGroups: [
       {
         id: 'mod_sweetness',
@@ -255,6 +258,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'STANDARD',
     preparationStation: 'KITCHEN',
+    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=600&auto=format&fit=crop&q=80',
     description: '27-layer laminated AOP butter pastry, baked golden fresh every morning.',
   },
   {
@@ -273,6 +277,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'STANDARD',
     preparationStation: 'KITCHEN',
+    image: 'https://images.unsplash.com/photo-1623334044303-241021148842?w=600&auto=format&fit=crop&q=80',
     description: 'Filled with rich almond frangipane cream and topped with toasted sliced almonds.',
   },
   {
@@ -291,6 +296,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'RECIPE',
     preparationStation: 'KITCHEN',
+    image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=600&auto=format&fit=crop&q=80',
     modifierGroups: [
       {
         id: 'mod_toast_addon',
@@ -323,6 +329,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'STANDARD',
     preparationStation: 'NONE',
+    image: 'https://images.unsplash.com/photo-1587734195503-904fca47e0e9?w=600&auto=format&fit=crop&q=80',
     description: 'Light roast with notes of jasmine, bergamot peach, and wild blossom honey.',
   },
   {
@@ -341,6 +348,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'STANDARD',
     preparationStation: 'NONE',
+    image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80',
     description: 'Medium roast with decadent brown sugar, dark cocoa, and red cherry notes.',
   },
   {
@@ -359,6 +367,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'STANDARD',
     preparationStation: 'NONE',
+    image: 'https://images.unsplash.com/photo-1527960471264-932f39eb5846?w=600&auto=format&fit=crop&q=80',
     description: 'Crisp, refreshing naturally carbonated mountain spring mineral water.',
   },
   {
@@ -377,6 +386,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'STANDARD',
     preparationStation: 'NONE',
+    image: 'https://images.unsplash.com/photo-1556881286-fc6915169721?w=600&auto=format&fit=crop&q=80',
     description: 'Raw cold-pressed ginger root blended with organic green tea kombucha.',
   },
   {
@@ -395,6 +405,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'STANDARD',
     preparationStation: 'NONE',
+    image: 'https://images.unsplash.com/photo-1517093709121-6a166a5c267a?w=600&auto=format&fit=crop&q=80',
     description: 'Artisanal hand-cooked Spanish potato chips flavored with genuine black summer truffle.',
   },
   {
@@ -413,6 +424,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     active: true,
     type: 'STANDARD',
     preparationStation: 'NONE',
+    image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80',
     description: 'Double-walled stainless steel thermal mug with ceramic inner coating for pure taste.',
   },
 ];

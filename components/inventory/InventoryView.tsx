@@ -20,6 +20,11 @@ import {
   ArrowUpRight,
   Flame,
   TrendingUp,
+  Image as ImageIcon,
+  Sparkles,
+  Wand2,
+  Camera,
+  Loader2,
 } from 'lucide-react';
 import type { Product, Category, InventoryMovement, Location, Sale, User as StaffUser } from '@/lib/types';
 import { db } from '@/lib/db';
@@ -28,6 +33,8 @@ import { sound } from '@/lib/audio';
 import { BulkImportModal } from './BulkImportModal';
 import { LocationHeatmap } from './LocationHeatmap';
 import { DemandForecasting } from './DemandForecasting';
+import { ProductImageModal } from './ProductImageModal';
+import { matchCuratedPreset, generateVectorPlaceholder } from '@/lib/catalogImages';
 
 interface InventoryViewProps {
   products: Product[];
@@ -94,6 +101,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [adjustReason, setAdjustReason] = useState<string>('Cycle count recount');
   const [isNewProductModal, setIsNewProductModal] = useState(false);
 
+  // Image Management & Visual Clarity State
+  const [selectedImageProduct, setSelectedImageProduct] = useState<Product | null>(null);
+  const [isBatchEnriching, setIsBatchEnriching] = useState(false);
+  const [batchMessage, setBatchMessage] = useState<string | null>(null);
+
   // New Product Form State
   const [newName, setNewName] = useState('');
   const [newSku, setNewSku] = useState('');
@@ -104,6 +116,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [newInitialStock, setNewInitialStock] = useState('20');
   const [newMinStock, setNewMinStock] = useState('5');
   const [newUnit, setNewUnit] = useState('piece');
+  const [newImage, setNewImage] = useState('');
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -157,6 +170,50 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     }
   };
 
+  // 1-Click Automated Catalog Imagery Enrichment for all missing items
+  const handleBatchEnrichImages = async () => {
+    const missing = products.filter(p => !p.image);
+    if (missing.length === 0) {
+      setBatchMessage('All catalog items already have visual imagery assigned!');
+      setTimeout(() => setBatchMessage(null), 4000);
+      return;
+    }
+
+    sound.playClick();
+    setIsBatchEnriching(true);
+
+    try {
+      let enrichedCount = 0;
+      await db.transaction('rw', db.products, async () => {
+        for (const prod of missing) {
+          const matched = matchCuratedPreset(prod.name, prod.categoryId);
+          const cat = categories.find(c => c.id === prod.categoryId);
+          const imageUrl = matched
+            ? matched.url
+            : generateVectorPlaceholder({
+                name: prod.name,
+                sku: prod.sku,
+                categoryName: cat?.name,
+                themeColor: cat?.color,
+              });
+
+          await db.products.update(prod.id, { image: imageUrl });
+          enrichedCount++;
+        }
+      });
+
+      sound.playSuccess();
+      await onRefreshData();
+      setBatchMessage(`Successfully enriched ${enrichedCount} catalog items with visual imagery!`);
+      setTimeout(() => setBatchMessage(null), 5000);
+    } catch (err: any) {
+      console.error('Batch enrich failed:', err);
+      alert(`Batch enrichment error: ${err.message}`);
+    } finally {
+      setIsBatchEnriching(false);
+    }
+  };
+
   // Handle creating new product
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,6 +239,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       active: true,
       type: 'STANDARD',
       preparationStation: 'NONE',
+      image: newImage.trim() || undefined,
     };
 
     await db.transaction('rw', [db.products, db.inventoryMovements], async () => {
@@ -209,6 +267,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     setNewName('');
     setNewSku('');
     setNewBarcode('');
+    setNewImage('');
     await onRefreshData();
   };
 
@@ -278,6 +337,27 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             <span>Bulk CSV Import</span>
           </button>
 
+          {/* 1-Click AI Catalog Imagery Enrichment */}
+          <button
+            id="batch-enrich-imagery-btn"
+            onClick={handleBatchEnrichImages}
+            disabled={isBatchEnriching}
+            className="px-4 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-xs font-bold text-purple-200 hover:text-white transition flex items-center gap-2 shadow-xs disabled:opacity-50"
+            title="Auto-enrich products missing images with AI & curated studio imagery"
+          >
+            {isBatchEnriching ? (
+              <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+            ) : (
+              <Wand2 className="w-4 h-4 text-purple-400" />
+            )}
+            <span>AI Imagery Studio</span>
+            {products.some(p => !p.image) && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-purple-500/30 text-purple-200 font-mono">
+                {products.filter(p => !p.image).length} unassigned
+              </span>
+            )}
+          </button>
+
           <button
             onClick={() => {
               sound.playClick();
@@ -290,6 +370,25 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Batch Enrichment Status Banner */}
+      {batchMessage && (
+        <div
+          id="batch-enrichment-toast"
+          className="bg-purple-950/40 border border-purple-500/40 text-purple-200 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-lg animate-in fade-in"
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-purple-400 shrink-0" />
+            <span>{batchMessage}</span>
+          </div>
+          <button
+            onClick={() => setBatchMessage(null)}
+            className="p-1 text-purple-300 hover:text-white rounded"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Automated Low-Stock Alerting Banner */}
       {lowStockStats.totalBelowThreshold > 0 && !isAlertBannerDismissed && (
@@ -551,7 +650,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             <thead className="bg-slate-950/70 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
               <tr>
                 <th className="p-3.5">SKU / Barcode</th>
-                <th className="p-3.5">Product Name</th>
+                <th className="p-3.5">Product & Visual</th>
                 <th className="p-3.5">Cost / Price</th>
                 <th className="p-3.5">Stock & Threshold Buffer</th>
                 <th className="p-3.5">Alert Warning Status</th>
@@ -597,10 +696,69 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                         <div className="text-[10px] text-slate-500">{prod.barcode}</div>
                       </td>
 
-                      {/* Product Name */}
+                      {/* Product Name & Visual Thumbnail */}
                       <td className="p-3.5">
-                        <div className="font-bold text-white text-xs">{prod.name}</div>
-                        <div className="text-[10px] text-slate-400 capitalize">{prod.unit}s</div>
+                        <div className="flex items-center gap-3">
+                          {/* Product Thumbnail with Click-to-Manage Image */}
+                          <button
+                            type="button"
+                            id={`btn-thumb-${prod.id}`}
+                            onClick={() => {
+                              sound.playClick();
+                              setSelectedImageProduct(prod);
+                            }}
+                            title="Manage product image (Link URL or generate with AI)"
+                            className="group relative w-11 h-11 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 shrink-0 hover:border-sky-500 transition shadow-inner flex items-center justify-center cursor-pointer"
+                          >
+                            {prod.image ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={prod.image}
+                                alt={prod.name}
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover transition duration-200 group-hover:scale-110"
+                              />
+                            ) : (
+                              <div
+                                className="w-full h-full flex flex-col items-center justify-center text-[10px] font-bold"
+                                style={{
+                                  backgroundColor: `${categories.find(c => c.id === prod.categoryId)?.color || '#0284c7'}25`,
+                                  color: categories.find(c => c.id === prod.categoryId)?.color || '#38bdf8',
+                                }}
+                              >
+                                <span>{prod.name.slice(0, 2).toUpperCase()}</span>
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
+                              <Camera className="w-3.5 h-3.5" />
+                            </div>
+                          </button>
+
+                          <div>
+                            <div
+                              onClick={() => {
+                                sound.playClick();
+                                setSelectedImageProduct(prod);
+                              }}
+                              className="font-bold text-white text-xs hover:text-sky-300 transition cursor-pointer leading-tight"
+                            >
+                              {prod.name}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span
+                                className="px-1.5 py-0.2 rounded text-[9.5px] font-semibold border"
+                                style={{
+                                  backgroundColor: `${categories.find(c => c.id === prod.categoryId)?.color || '#0284c7'}15`,
+                                  borderColor: `${categories.find(c => c.id === prod.categoryId)?.color || '#0284c7'}40`,
+                                  color: '#f8fafc',
+                                }}
+                              >
+                                {categories.find(c => c.id === prod.categoryId)?.name || 'General'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 capitalize">• {prod.unit}s</span>
+                            </div>
+                          </div>
+                        </div>
                       </td>
 
                       {/* Cost / Price */}
@@ -689,6 +847,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                       {/* Action buttons */}
                       <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
+                        <button
+                          id={`manage-image-btn-${prod.id}`}
+                          onClick={() => {
+                            sound.playClick();
+                            setSelectedImageProduct(prod);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 hover:text-white text-[11px] font-semibold transition inline-flex items-center gap-1"
+                          title="Link product image or generate AI imagery"
+                        >
+                          <ImageIcon className="w-3 h-3" />
+                          Image
+                        </button>
                         {isLow && (
                           <button
                             id={`quick-restock-btn-${prod.id}`}
@@ -1045,6 +1215,59 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Product Image URL or Quick Auto-Fill */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-slate-400 uppercase tracking-wider">
+                    Product Image URL (Optional)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playClick();
+                      const matched = matchCuratedPreset(newName, newCategory);
+                      if (matched) {
+                        setNewImage(matched.url);
+                      } else {
+                        const catObj = categories.find(c => c.id === newCategory);
+                        const svgData = generateVectorPlaceholder({
+                          name: newName || 'Catalog Product',
+                          sku: newSku || 'SKU',
+                          categoryName: catObj?.name,
+                          themeColor: catObj?.color,
+                        });
+                        setNewImage(svgData);
+                      }
+                    }}
+                    className="text-[10.5px] text-sky-400 hover:underline flex items-center gap-1"
+                  >
+                    <Wand2 className="w-3 h-3" /> Auto-Detect Preset
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+                    {newImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={newImage}
+                        alt="Preview"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-slate-600" />
+                    )}
+                  </div>
+                  <input
+                    type="url"
+                    value={newImage}
+                    onChange={e => setNewImage(e.target.value)}
+                    placeholder="https://... or click Auto-Detect Preset"
+                    className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-hidden font-mono"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex justify-end gap-2">
@@ -1075,6 +1298,17 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         currentLocation={currentLocation}
         currentUser={currentUser}
         onSuccess={async () => {
+          await onRefreshData();
+        }}
+      />
+
+      {/* Product Image Linking & AI Generation Modal */}
+      <ProductImageModal
+        isOpen={!!selectedImageProduct}
+        product={selectedImageProduct}
+        category={categories.find(c => c.id === selectedImageProduct?.categoryId)}
+        onClose={() => setSelectedImageProduct(null)}
+        onSave={async () => {
           await onRefreshData();
         }}
       />

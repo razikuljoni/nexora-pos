@@ -508,26 +508,60 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                     className="bg-slate-900/90 hover:bg-slate-850 active:scale-[0.98] border border-slate-800 hover:border-sky-500/50 rounded-xl p-3 text-left flex flex-col justify-between transition-all duration-150 group shadow-sm hover:shadow-md"
                   >
                     <div>
-                      <div className="flex items-start justify-between gap-1 mb-1.5">
-                        <span className="text-[10px] font-mono font-semibold text-slate-500 group-hover:text-sky-400">
-                          {prod.sku}
-                        </span>
-                        {hasModifiers ? (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300">
-                            Custom
+                      {prod.image ? (
+                        <div className="w-full h-20 sm:h-22 mb-2 rounded-lg overflow-hidden bg-slate-950 border border-slate-800/80 relative">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={prod.image}
+                            alt={prod.name}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          />
+                          <div className="absolute top-1 left-1">
+                            <span className="text-[9px] font-mono font-bold bg-black/75 px-1.5 py-0.5 rounded text-slate-200">
+                              {prod.sku}
+                            </span>
+                          </div>
+                          <div className="absolute top-1 right-1">
+                            {hasModifiers ? (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/90 text-white shadow-xs">
+                                Custom
+                              </span>
+                            ) : (
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${
+                                  isLowStock
+                                    ? 'bg-rose-500/90 text-white shadow-xs'
+                                    : 'bg-slate-900/80 text-slate-300'
+                                }`}
+                              >
+                                {prod.stockQuantity}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-1 mb-1.5">
+                          <span className="text-[10px] font-mono font-semibold text-slate-500 group-hover:text-sky-400">
+                            {prod.sku}
                           </span>
-                        ) : (
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${
-                              isLowStock
-                                ? 'bg-rose-500/20 text-rose-300'
-                                : 'bg-slate-800 text-slate-400'
-                            }`}
-                          >
-                            {prod.stockQuantity} in stock
-                          </span>
-                        )}
-                      </div>
+                          {hasModifiers ? (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300">
+                              Custom
+                            </span>
+                          ) : (
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${
+                                isLowStock
+                                  ? 'bg-rose-500/20 text-rose-300'
+                                  : 'bg-slate-800 text-slate-400'
+                              }`}
+                            >
+                              {prod.stockQuantity} in stock
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <h3 className="font-bold text-xs text-white line-clamp-2 leading-snug group-hover:text-sky-200">
                         {prod.name}
