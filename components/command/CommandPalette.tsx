@@ -36,6 +36,8 @@ import {
   X,
   Layers,
   ChevronRight,
+  LayoutDashboard,
+  Flame,
 } from 'lucide-react';
 import { sound } from '@/lib/audio';
 import type {
@@ -60,7 +62,7 @@ export interface CommandItem {
   icon: React.ReactNode;
   keywords?: string[];
   product?: Product;
-  tab?: 'checkout' | 'shifts' | 'inventory' | 'orders' | 'settings';
+  tab?: 'checkout' | 'shifts' | 'inventory' | 'orders' | 'dashboard' | 'settings';
   actionId?: string;
   payload?: any;
 }
@@ -78,9 +80,9 @@ interface CommandPaletteProps {
   users: StaffUser[];
   currentUser: StaffUser;
   businessMode: BusinessMode;
-  activeTab: 'checkout' | 'shifts' | 'inventory' | 'orders' | 'settings';
+  activeTab: 'checkout' | 'shifts' | 'inventory' | 'orders' | 'dashboard' | 'settings';
   // State Handlers
-  onSelectTab: (tab: 'checkout' | 'shifts' | 'inventory' | 'orders' | 'settings') => void;
+  onSelectTab: (tab: 'checkout' | 'shifts' | 'inventory' | 'orders' | 'dashboard' | 'settings') => void;
   onAddProductToCart: (product: Product) => void;
   onQuickAction: (actionId: string, payload?: any) => void;
   // Status
@@ -169,6 +171,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         keywords: ['orders', 'sales', 'receipts', 'returns', 'refunds', 'history', 'completed'],
       },
       {
+        id: 'tab_dashboard',
+        type: 'TAB',
+        title: 'Manager Dashboard',
+        subtitle: 'Customizable drag-and-drop analytics, sales heatmaps & low stock widgets',
+        badge: activeTab === 'dashboard' ? 'Current Tab' : undefined,
+        icon: <LayoutDashboard className="w-4 h-4 text-sky-400" />,
+        tab: 'dashboard',
+        keywords: ['dashboard', 'manager', 'analytics', 'widgets', 'heatmap', 'charts', 'kpis', 'reorder'],
+      },
+      {
         id: 'tab_settings',
         type: 'TAB',
         title: 'Settings & Peripherals',
@@ -184,6 +196,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   // Build Quick Action items
   const actionItems: CommandItem[] = useMemo(() => {
     const items: CommandItem[] = [
+      {
+        id: 'action_open_manager_dashboard',
+        type: 'ACTION',
+        title: 'Open Manager Dashboard',
+        subtitle: 'View customizable sales charts, velocity heatmaps & stock alerts',
+        icon: <LayoutDashboard className="w-4 h-4 text-sky-400" />,
+        actionId: 'OPEN_MANAGER_DASHBOARD',
+        keywords: ['dashboard', 'manager', 'kpis', 'analytics', 'widgets'],
+      },
       {
         id: 'action_no_sale_drawer',
         type: 'ACTION',

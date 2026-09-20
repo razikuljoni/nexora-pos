@@ -19,6 +19,7 @@ import {
   Sparkles,
   Search,
   Command,
+  LayoutDashboard,
 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { seedDatabase, INITIAL_LOCATIONS, INITIAL_REGISTERS, INITIAL_USERS } from '@/lib/mockData';
@@ -45,12 +46,13 @@ import { CheckoutView } from '@/components/pos/CheckoutView';
 import { ShiftView } from '@/components/shifts/ShiftView';
 import { InventoryView } from '@/components/inventory/InventoryView';
 import { OrdersView } from '@/components/orders/OrdersView';
+import { ManagerDashboardView } from '@/components/dashboard/ManagerDashboardView';
 import { SettingsView } from '@/components/settings/SettingsView';
 import { OfflineConfidenceModal } from '@/components/offline/OfflineConfidenceModal';
 import { CommandPalette } from '@/components/command/CommandPalette';
 
 export default function NexoraPOSApp() {
-  const [activeTab, setActiveTab] = useState<'checkout' | 'shifts' | 'inventory' | 'orders' | 'settings'>('checkout');
+  const [activeTab, setActiveTab] = useState<'checkout' | 'shifts' | 'inventory' | 'orders' | 'dashboard' | 'settings'>('checkout');
   const [businessMode, setBusinessMode] = useState<BusinessMode>('RETAIL');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -317,6 +319,10 @@ export default function NexoraPOSApp() {
         sound.playClick();
         showToast(`Active location: ${payload.location.name}`);
         refreshData();
+      } else if (actionId === 'OPEN_MANAGER_DASHBOARD') {
+        setActiveTab('dashboard');
+        sound.playClick();
+        showToast('Opened Manager Analytics Dashboard');
       } else if (actionId === 'SWITCH_USER' && payload?.user) {
         setCurrentUser(payload.user);
         sound.playClick();
@@ -507,6 +513,21 @@ export default function NexoraPOSApp() {
           <button
             onClick={() => {
               sound.playClick();
+              setActiveTab('dashboard');
+            }}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+              activeTab === 'dashboard'
+                ? 'bg-sky-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            <span>Manager Dashboard</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playClick();
               setActiveTab('settings');
             }}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
@@ -616,6 +637,19 @@ export default function NexoraPOSApp() {
         <button
           onClick={() => {
             sound.playClick();
+            setActiveTab('dashboard');
+          }}
+          className={`py-1 px-2.5 rounded-lg text-xs font-bold flex flex-col items-center ${
+            activeTab === 'dashboard' ? 'text-sky-400' : 'text-slate-400'
+          }`}
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          <span className="text-[10px]">Manager</span>
+        </button>
+
+        <button
+          onClick={() => {
+            sound.playClick();
             setActiveTab('settings');
           }}
           className={`py-1 px-2.5 rounded-lg text-xs font-bold flex flex-col items-center ${
@@ -679,6 +713,25 @@ export default function NexoraPOSApp() {
             currentLocation={currentLocation}
             currentUser={currentUser}
             onRefreshData={refreshData}
+          />
+        )}
+
+        {activeTab === 'dashboard' && (
+          <ManagerDashboardView
+            sales={sales}
+            products={products}
+            categories={categories}
+            currentLocation={currentLocation}
+            currentRegister={currentRegister}
+            currentUser={currentUser}
+            activeShift={activeShift}
+            cashMovements={cashMovements}
+            isOffline={isActuallyOffline}
+            onRefreshData={refreshData}
+            onNavigateToTab={tab => {
+              setActiveTab(tab as any);
+              sound.playClick();
+            }}
           />
         )}
 
