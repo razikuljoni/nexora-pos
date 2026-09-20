@@ -149,7 +149,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-950 text-slate-100">
+    <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6 bg-slate-950 text-slate-100">
       {/* Header */}
       <div className="border-b border-slate-800 pb-5">
         <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2.5">
@@ -161,9 +161,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 max-w-5xl">
+      <div className="grid md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-5xl">
         {/* Operating Profile Mode */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
               <Sliders className="w-5 h-5" />
@@ -174,7 +174,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <button
               onClick={() => {
                 sound.playClick();

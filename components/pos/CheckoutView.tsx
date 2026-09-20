@@ -16,6 +16,7 @@ import {
   Layers,
   ArrowRight,
   Sparkles,
+  Banknote,
 } from 'lucide-react';
 import type {
   Product,
@@ -81,6 +82,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [tableNumber, setTableNumber] = useState<string>('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>(undefined);
   const [wholeCartDiscountPercent, setWholeCartDiscountPercent] = useState<number>(0);
+  const [mobileCheckoutTab, setMobileCheckoutTab] = useState<'catalog' | 'cart'>('catalog');
 
   // Modals state
   const [activeModifierProduct, setActiveModifierProduct] = useState<Product | null>(null);
@@ -502,9 +504,50 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+    <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      {/* Mobile Sub-Navigation Header: Catalog vs Cart */}
+      <div className="lg:hidden bg-slate-900 border-b border-slate-800 p-2 flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => {
+            sound.playClick();
+            setMobileCheckoutTab('catalog');
+          }}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
+            mobileCheckoutTab === 'catalog'
+              ? 'bg-sky-600 text-white shadow-md shadow-sky-950'
+              : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4" />
+          <span>Catalog ({products.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            sound.playClick();
+            setMobileCheckoutTab('cart');
+          }}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
+            mobileCheckoutTab === 'cart'
+              ? 'bg-sky-600 text-white shadow-md shadow-sky-950'
+              : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+          }`}
+        >
+          <div className="relative">
+            <Banknote className="w-4 h-4" />
+            {cartItems.length > 0 && (
+              <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-[9px] font-black text-white flex items-center justify-center">
+                {cartItems.reduce((acc, it) => acc + it.quantity, 0)}
+              </span>
+            )}
+          </div>
+          <span>Cart ({currentLocation.currencySymbol}{grandTotal.toFixed(2)})</span>
+        </button>
+      </div>
+
       {/* LEFT / CENTER: Catalog & Fast Product Search Column */}
-      <div className="flex-1 flex flex-col min-w-0 border-r border-slate-800 bg-slate-950">
+      <div className={`flex-1 flex-col min-w-0 border-r border-slate-800 bg-slate-950 ${mobileCheckoutTab === 'catalog' ? 'flex' : 'hidden lg:flex'}`}>
         {/* Top Control Bar: Search, Barcode trigger, Category pills */}
         <div className="p-4 border-b border-slate-800 space-y-3 bg-slate-900/40">
           <div className="flex items-center gap-2">
@@ -680,7 +723,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       </div>
 
       {/* RIGHT: Current Cart & Payment Summary Column */}
-      <div className="w-full lg:w-96 xl:w-[420px] bg-slate-900 border-t lg:border-t-0 border-slate-800 flex flex-col shrink-0">
+      <div className={`w-full lg:w-96 xl:w-[420px] 2xl:w-[460px] bg-slate-900 border-t lg:border-t-0 border-slate-800 flex-col shrink-0 ${mobileCheckoutTab === 'cart' ? 'flex' : 'hidden lg:flex'}`}>
         {/* Cart Top Bar: Order Type, Table, Customer */}
         <div className="p-3.5 border-b border-slate-800 space-y-2 bg-slate-950/60">
           <div className="flex items-center justify-between gap-2">
@@ -1021,6 +1064,57 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
           setIsReceiptOpen(true);
         }}
       />
+
+      {/* Mobile Floating Cart Action Bar */}
+      {mobileCheckoutTab === 'catalog' && cartItems.length > 0 && (
+        <div className="lg:hidden fixed bottom-16 left-3 right-3 z-30 bg-slate-900/95 border border-slate-700/80 rounded-2xl p-2.5 shadow-2xl backdrop-blur-md flex items-center justify-between gap-2.5 animate-in slide-in-from-bottom-3 duration-200">
+          <button
+            type="button"
+            onClick={() => {
+              sound.playClick();
+              setMobileCheckoutTab('cart');
+            }}
+            className="flex items-center gap-2.5 pl-2 text-left"
+          >
+            <div className="relative">
+              <ShoppingBag className="w-5 h-5 text-sky-400" />
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-sky-500 text-[10px] font-black font-mono text-white flex items-center justify-center">
+                {cartItems.reduce((acc, it) => acc + it.quantity, 0)}
+              </span>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Cart Total</div>
+              <div className="text-sm font-black font-mono text-white leading-tight">
+                {currentLocation.currencySymbol}{grandTotal.toFixed(2)}
+              </div>
+            </div>
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                setMobileCheckoutTab('cart');
+              }}
+              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition"
+            >
+              Review
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                setIsPaymentOpen(true);
+              }}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-emerald-950 transition"
+            >
+              <span>Pay</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Floating Quick Actions Speed-Dial Menu */}
       <QuickActionsFloatingMenu

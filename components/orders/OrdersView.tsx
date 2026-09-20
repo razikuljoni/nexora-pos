@@ -113,7 +113,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     : 0;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-950 text-slate-100">
+    <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6 bg-slate-950 text-slate-100">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>
@@ -164,9 +164,83 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         </div>
       </div>
 
-      {/* Orders Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Orders Display (Mobile Cards + Desktop Table) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        {/* Mobile Orders Cards (< md) */}
+        <div className="md:hidden divide-y divide-slate-800/80">
+          {filteredSales.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-500">
+              No orders found matching your search.
+            </div>
+          ) : (
+            filteredSales.map(sale => {
+              const totalItemQty = sale.items.reduce((acc, it) => acc + it.quantity, 0);
+              const paymentMethods = sale.payments.map(p => p.method).join(', ');
+
+              return (
+                <div key={sale.id} className="p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-mono font-bold text-sky-400 text-xs">{sale.orderNumber}</span>
+                      <span className="text-[10px] text-slate-500 ml-2 font-mono">
+                        {new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[9.5px] font-bold uppercase ${
+                        sale.status === 'COMPLETED'
+                          ? 'bg-emerald-500/20 text-emerald-300'
+                          : sale.status === 'REFUNDED'
+                          ? 'bg-rose-500/20 text-rose-300'
+                          : 'bg-amber-500/20 text-amber-300'
+                      }`}
+                    >
+                      {sale.status}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-semibold text-white">{sale.customerName || 'Walk-in Customer'}</div>
+                      <div className="text-[10px] text-slate-400">By {sale.cashierName} • {totalItemQty} items</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono font-bold text-emerald-400 text-sm">
+                        {currentLocation.currencySymbol}{sale.total.toFixed(2)}
+                      </div>
+                      <div className="text-[10px] text-slate-400">{paymentMethods}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800/60">
+                    <button
+                      onClick={() => {
+                        sound.playClick();
+                        setReceiptSale(sale);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-semibold flex items-center gap-1"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      Receipt
+                    </button>
+                    {sale.status === 'COMPLETED' && (
+                      <button
+                        onClick={() => handleOpenRefundModal(sale)}
+                        className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center gap-1"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Refund
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Orders Table (>= md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950/70 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
               <tr>

@@ -382,22 +382,22 @@ export default function NexoraPOSApp() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
       {/* Top Application Navigation Bar */}
-      <header className="h-14 bg-slate-900 border-b border-slate-800 px-3 sm:px-4 flex items-center justify-between gap-3 shrink-0">
+      <header className="h-14 bg-slate-900 border-b border-slate-800 px-2.5 sm:px-4 flex items-center justify-between gap-2 sm:gap-3 shrink-0">
         {/* Brand & Mode */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-md shadow-sky-950">
               NX
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-xs font-black tracking-wider text-white flex items-center gap-1.5">
                 <span>NEXORA</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                <span className="hidden xs:inline-block text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-sky-500/20 text-sky-300 border border-sky-500/30">
                   POS
                 </span>
               </div>
-              <div className="text-[10px] text-slate-400 leading-none">
-                {businessMode === 'RETAIL' ? 'Retail Scanner' : 'Café / QSR'} • {currentLocation.name}
+              <div className="text-[10px] text-slate-400 leading-none truncate max-w-[110px] sm:max-w-none">
+                {currentLocation.name}
               </div>
             </div>
           </div>
@@ -408,7 +408,7 @@ export default function NexoraPOSApp() {
               sound.playClick();
               setIsConfidenceModalOpen(true);
             }}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 border transition cursor-pointer ${
+            className={`px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold flex items-center gap-1 sm:gap-1.5 border transition cursor-pointer shrink-0 ${
               isActuallyOffline
                 ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/20'
                 : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20'
@@ -417,18 +417,36 @@ export default function NexoraPOSApp() {
           >
             {isActuallyOffline ? (
               <>
-                <WifiOff className="w-3.5 h-3.5 text-amber-400" />
-                <span>OFFLINE ({pendingSyncCommands.length})</span>
+                <WifiOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="hidden xs:inline">OFFLINE</span>
+                <span>({pendingSyncCommands.length})</span>
               </>
             ) : (
               <>
-                <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-                <span>ONLINE {pendingSyncCommands.length > 0 ? `(${pendingSyncCommands.length} pending)` : ''}</span>
+                <Wifi className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="hidden xs:inline">ONLINE</span>
+                {pendingSyncCommands.length > 0 ? (
+                  <span className="font-mono">({pendingSyncCommands.length})</span>
+                ) : null}
               </>
             )}
           </button>
 
-          {/* Global Command Palette Omnibar Trigger */}
+          {/* Mobile Command Palette Trigger Icon */}
+          <button
+            id="btn-open-command-palette-mobile"
+            type="button"
+            onClick={() => {
+              sound.playClick();
+              setIsCommandPaletteOpen(true);
+            }}
+            className="sm:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-white border border-slate-700 transition"
+            title="Open Global Search (⌘K)"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+
+          {/* Global Command Palette Omnibar Trigger (Desktop) */}
           <button
             id="btn-open-command-palette"
             type="button"
@@ -449,20 +467,20 @@ export default function NexoraPOSApp() {
         </div>
 
         {/* Center Nav Views (Desktop & Tablet) */}
-        <nav className="hidden md:flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+        <nav className="hidden lg:flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => {
               sound.playClick();
               setActiveTab('checkout');
             }}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
               activeTab === 'checkout'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <ShoppingBag className="w-3.5 h-3.5" />
-            <span>Checkout (F1)</span>
+            <span>Checkout</span>
           </button>
 
           <button
@@ -470,14 +488,14 @@ export default function NexoraPOSApp() {
               sound.playClick();
               setActiveTab('shifts');
             }}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
               activeTab === 'shifts'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span>Shift & Drawer</span>
+            <span>Shift</span>
           </button>
 
           <button
@@ -485,14 +503,14 @@ export default function NexoraPOSApp() {
               sound.playClick();
               setActiveTab('inventory');
             }}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
               activeTab === 'inventory'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <Package className="w-3.5 h-3.5" />
-            <span>Inventory Ledger</span>
+            <span>Stock</span>
           </button>
 
           <button
@@ -500,14 +518,14 @@ export default function NexoraPOSApp() {
               sound.playClick();
               setActiveTab('orders');
             }}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
               activeTab === 'orders'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Orders & Returns</span>
+            <span>Orders</span>
           </button>
 
           <button
@@ -515,14 +533,14 @@ export default function NexoraPOSApp() {
               sound.playClick();
               setActiveTab('dashboard');
             }}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
               activeTab === 'dashboard'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>Manager Dashboard</span>
+            <span>Manager</span>
           </button>
 
           <button
@@ -530,7 +548,7 @@ export default function NexoraPOSApp() {
               sound.playClick();
               setActiveTab('settings');
             }}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
               activeTab === 'settings'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-400 hover:text-white'
@@ -542,7 +560,7 @@ export default function NexoraPOSApp() {
         </nav>
 
         {/* Right Status Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* PWA Install Button */}
           {isInstallable && (
             <button
@@ -550,11 +568,11 @@ export default function NexoraPOSApp() {
                 sound.playClick();
                 install();
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-xs font-bold flex items-center gap-1.5 transition"
-              title="Install Nexora POS PWA to desktop / tablet"
+              className="px-2 sm:px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-xs font-bold flex items-center gap-1.5 transition"
+              title="Install Nexora POS PWA"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Install PWA</span>
+              <span className="hidden sm:inline">Install</span>
             </button>
           )}
 
@@ -562,36 +580,43 @@ export default function NexoraPOSApp() {
           <button
             onClick={toggleSound}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
-            title={audioMuted ? 'Unmute Web Audio Haptics' : 'Mute Web Audio Haptics'}
+            title={audioMuted ? 'Unmute Web Audio' : 'Mute Web Audio'}
           >
             {audioMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-sky-400" />}
           </button>
 
           {/* Cashier Badge */}
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-            <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-sky-400">
+          <div className="flex items-center gap-2 pl-1.5 sm:pl-2 border-l border-slate-800">
+            <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-sky-400 shrink-0">
               {currentUser.name.slice(0, 1)}
             </div>
             <div className="hidden sm:block text-left">
-              <div className="text-xs font-bold text-white leading-tight">{currentUser.name}</div>
+              <div className="text-xs font-bold text-white leading-tight truncate max-w-[90px]">{currentUser.name}</div>
               <div className="text-[10px] text-slate-400 leading-none">{currentUser.role}</div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile Secondary Navigation Row */}
-      <div className="md:hidden bg-slate-900 border-b border-slate-800 flex items-center justify-around py-1.5 px-2">
+      {/* Mobile Ergonomic Bottom Navigation Bar (Screens < lg) */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 border-t border-slate-800 backdrop-blur-md py-1.5 px-2 flex items-center justify-around shadow-2xl shadow-black">
         <button
           onClick={() => {
             sound.playClick();
             setActiveTab('checkout');
           }}
-          className={`py-1 px-2.5 rounded-lg text-xs font-bold flex flex-col items-center ${
-            activeTab === 'checkout' ? 'text-sky-400' : 'text-slate-400'
+          className={`py-1 px-2 rounded-xl text-xs font-bold flex flex-col items-center gap-0.5 transition active:scale-95 ${
+            activeTab === 'checkout' ? 'text-sky-400 bg-sky-500/10' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <ShoppingBag className="w-4 h-4" />
+          <div className="relative">
+            <ShoppingBag className="w-4 h-4" />
+            {cartItemsCount > 0 && (
+              <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-sky-500 text-[9px] font-black text-white flex items-center justify-center">
+                {cartItemsCount}
+              </span>
+            )}
+          </div>
           <span className="text-[10px]">Checkout</span>
         </button>
 
@@ -600,8 +625,8 @@ export default function NexoraPOSApp() {
             sound.playClick();
             setActiveTab('shifts');
           }}
-          className={`py-1 px-2.5 rounded-lg text-xs font-bold flex flex-col items-center ${
-            activeTab === 'shifts' ? 'text-sky-400' : 'text-slate-400'
+          className={`py-1 px-2 rounded-xl text-xs font-bold flex flex-col items-center gap-0.5 transition active:scale-95 ${
+            activeTab === 'shifts' ? 'text-sky-400 bg-sky-500/10' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <Clock className="w-4 h-4" />
@@ -613,8 +638,8 @@ export default function NexoraPOSApp() {
             sound.playClick();
             setActiveTab('inventory');
           }}
-          className={`py-1 px-2.5 rounded-lg text-xs font-bold flex flex-col items-center ${
-            activeTab === 'inventory' ? 'text-sky-400' : 'text-slate-400'
+          className={`py-1 px-2 rounded-xl text-xs font-bold flex flex-col items-center gap-0.5 transition active:scale-95 ${
+            activeTab === 'inventory' ? 'text-sky-400 bg-sky-500/10' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <Package className="w-4 h-4" />
@@ -626,8 +651,8 @@ export default function NexoraPOSApp() {
             sound.playClick();
             setActiveTab('orders');
           }}
-          className={`py-1 px-2.5 rounded-lg text-xs font-bold flex flex-col items-center ${
-            activeTab === 'orders' ? 'text-sky-400' : 'text-slate-400'
+          className={`py-1 px-2 rounded-xl text-xs font-bold flex flex-col items-center gap-0.5 transition active:scale-95 ${
+            activeTab === 'orders' ? 'text-sky-400 bg-sky-500/10' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <FileText className="w-4 h-4" />
@@ -639,8 +664,8 @@ export default function NexoraPOSApp() {
             sound.playClick();
             setActiveTab('dashboard');
           }}
-          className={`py-1 px-2.5 rounded-lg text-xs font-bold flex flex-col items-center ${
-            activeTab === 'dashboard' ? 'text-sky-400' : 'text-slate-400'
+          className={`py-1 px-2 rounded-xl text-xs font-bold flex flex-col items-center gap-0.5 transition active:scale-95 ${
+            activeTab === 'dashboard' ? 'text-sky-400 bg-sky-500/10' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <LayoutDashboard className="w-4 h-4" />
@@ -652,17 +677,17 @@ export default function NexoraPOSApp() {
             sound.playClick();
             setActiveTab('settings');
           }}
-          className={`py-1 px-2.5 rounded-lg text-xs font-bold flex flex-col items-center ${
-            activeTab === 'settings' ? 'text-sky-400' : 'text-slate-400'
+          className={`py-1 px-2 rounded-xl text-xs font-bold flex flex-col items-center gap-0.5 transition active:scale-95 ${
+            activeTab === 'settings' ? 'text-sky-400 bg-sky-500/10' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <Settings className="w-4 h-4" />
           <span className="text-[10px]">Settings</span>
         </button>
-      </div>
+      </nav>
 
       {/* Main Content Workspace */}
-      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden pb-16 lg:pb-0">
         {activeTab === 'checkout' && (
           <CheckoutView
             products={products}

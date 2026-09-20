@@ -404,9 +404,9 @@ export const ManagerDashboardView: React.FC<ManagerDashboardViewProps> = ({
       </div>
 
       {/* Main Container Area */}
-      <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto w-full">
+      <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto w-full">
         {/* Executive Quick Stats Strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-sm">
             <div className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
               <span>Gross Sales Volume</span>

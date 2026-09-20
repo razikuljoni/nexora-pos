@@ -127,16 +127,16 @@ const PaymentModalContent: React.FC<Omit<PaymentModalProps, 'isOpen'>> = ({
   ).slice(0, 5);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150">
       <div className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <Banknote className="w-6 h-6" />
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800 bg-slate-950/70">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <Banknote className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Payment & Tender</h2>
+              <h2 className="text-base sm:text-lg font-bold text-white">Payment & Tender</h2>
               <p className="text-xs text-slate-400">Total payable: <strong className="text-emerald-400 font-mono text-sm">{currencySymbol}{total.toFixed(2)}</strong></p>
             </div>
           </div>
@@ -149,22 +149,22 @@ const PaymentModalContent: React.FC<Omit<PaymentModalProps, 'isOpen'>> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto space-y-6">
+        <div className="p-3.5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6">
           {/* Method Selector Tabs */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <button
               onClick={() => {
                 sound.playClick();
                 setSelectedMethod('CASH');
               }}
-              className={`p-3.5 rounded-xl border flex flex-col items-center gap-2 transition ${
+              className={`p-2.5 sm:p-3.5 rounded-xl border flex flex-col items-center gap-1.5 sm:gap-2 transition ${
                 selectedMethod === 'CASH'
                   ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-950'
                   : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <Banknote className="w-5 h-5" />
-              <span className="text-xs font-bold uppercase tracking-wider">Cash Tender</span>
+              <Banknote className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Cash</span>
             </button>
 
             <button
@@ -172,14 +172,14 @@ const PaymentModalContent: React.FC<Omit<PaymentModalProps, 'isOpen'>> = ({
                 sound.playClick();
                 setSelectedMethod('CARD');
               }}
-              className={`p-3.5 rounded-xl border flex flex-col items-center gap-2 transition ${
+              className={`p-2.5 sm:p-3.5 rounded-xl border flex flex-col items-center gap-1.5 sm:gap-2 transition ${
                 selectedMethod === 'CARD'
                   ? 'bg-sky-500/20 border-sky-500 text-sky-300 shadow-md shadow-sky-950'
                   : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <CreditCard className="w-5 h-5" />
-              <span className="text-xs font-bold uppercase tracking-wider">Credit / Debit</span>
+              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Card</span>
             </button>
 
             <button
@@ -187,14 +187,14 @@ const PaymentModalContent: React.FC<Omit<PaymentModalProps, 'isOpen'>> = ({
                 sound.playClick();
                 setSelectedMethod('MOBILE_WALLET');
               }}
-              className={`p-3.5 rounded-xl border flex flex-col items-center gap-2 transition ${
+              className={`p-2.5 sm:p-3.5 rounded-xl border flex flex-col items-center gap-1.5 sm:gap-2 transition ${
                 selectedMethod === 'MOBILE_WALLET'
                   ? 'bg-purple-500/20 border-purple-500 text-purple-300 shadow-md shadow-purple-950'
                   : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <Smartphone className="w-5 h-5" />
-              <span className="text-xs font-bold uppercase tracking-wider">Mobile / QR</span>
+              <Smartphone className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Mobile</span>
             </button>
           </div>
 

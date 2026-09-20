@@ -138,11 +138,11 @@ export const ShiftView: React.FC<ShiftViewProps> = ({
     : 0;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-950 text-slate-100">
+    <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6 bg-slate-950 text-slate-100">
       {/* Header & Status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
             <h1 className="text-xl font-bold tracking-tight text-white">Cash & Shift Management</h1>
             <span
               className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
@@ -167,7 +167,7 @@ export const ShiftView: React.FC<ShiftViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {activeShift ? (
             <>
               <button
@@ -175,10 +175,10 @@ export const ShiftView: React.FC<ShiftViewProps> = ({
                   sound.playClick();
                   setIsCashMovementModal(true);
                 }}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-white transition flex items-center gap-2"
+                className="px-3.5 sm:px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-white transition flex items-center gap-2"
               >
                 <Banknote className="w-4 h-4 text-amber-400" />
-                Cash In / Out
+                <span>Cash In / Out</span>
               </button>
               <button
                 onClick={() => {
@@ -186,10 +186,10 @@ export const ShiftView: React.FC<ShiftViewProps> = ({
                   setCountedCashInput(activeShift.expectedCash.toFixed(2));
                   setIsCloseShiftModal(true);
                 }}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white transition flex items-center gap-2 shadow-md shadow-rose-950"
+                className="px-4 sm:px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white transition flex items-center gap-2 shadow-md shadow-rose-950"
               >
                 <Lock className="w-4 h-4" />
-                Close Shift (Smart Close)
+                <span>Close Shift</span>
               </button>
             </>
           ) : (
@@ -198,10 +198,10 @@ export const ShiftView: React.FC<ShiftViewProps> = ({
                 sound.playClick();
                 setIsOpenShiftModal(true);
               }}
-              className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition flex items-center gap-2 shadow-md shadow-emerald-950"
+              className="px-5 sm:px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition flex items-center gap-2 shadow-md shadow-emerald-950"
             >
               <Unlock className="w-4 h-4" />
-              Open New Shift
+              <span>Open New Shift</span>
             </button>
           )}
         </div>
@@ -365,13 +365,63 @@ export const ShiftView: React.FC<ShiftViewProps> = ({
         </div>
       )}
 
-      {/* Past Shifts History Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+      {/* Past Shifts History Display (Mobile Cards + Desktop Table) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
           Historical Shift Records & Z-Reports
         </h3>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Shift Cards (< md) */}
+        <div className="md:hidden divide-y divide-slate-800/70">
+          {pastShifts.length === 0 ? (
+            <div className="p-6 text-center text-xs text-slate-500">
+              No historical shifts recorded yet.
+            </div>
+          ) : (
+            pastShifts.map(s => (
+              <div key={s.id} className="py-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-mono text-xs font-bold text-white">#{s.id.slice(-8)}</span>
+                    <span className="text-xs text-slate-400 ml-2">• {s.cashierName}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      sound.playClick();
+                      setSelectedZReportShift(s);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 text-[11px] font-medium"
+                  >
+                    Z-Report
+                  </button>
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono flex justify-between">
+                  <span>Opened: {new Date(s.openedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span>{s.closedAt ? `Closed: ${new Date(s.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Active'}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 bg-slate-950/60 p-2 rounded-xl text-center text-[10px]">
+                  <div>
+                    <div className="text-slate-400">Expected</div>
+                    <div className="font-mono font-bold text-slate-200">{currentLocation.currencySymbol}{s.expectedCash.toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-400">Counted</div>
+                    <div className="font-mono font-bold text-white">{s.countedCash !== null ? `${currentLocation.currencySymbol}${s.countedCash.toFixed(2)}` : '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-400">Variance</div>
+                    <div className={`font-mono font-bold ${s.variance === 0 ? 'text-emerald-400' : s.variance && s.variance < 0 ? 'text-rose-400' : 'text-amber-400'}`}>
+                      {s.variance !== null ? `${s.variance > 0 ? '+' : ''}${currentLocation.currencySymbol}${s.variance.toFixed(2)}` : '—'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Past Shifts Table (>= md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950/60 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
               <tr>
