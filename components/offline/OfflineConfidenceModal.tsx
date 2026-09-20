@@ -31,6 +31,8 @@ export const OfflineConfidenceModal: React.FC<OfflineConfidenceModalProps> = ({ 
     pendingCount: 0,
     isSyncing: false,
     dbHealthy: true,
+    isAutoSyncEnabled: true,
+    autoSyncIntervalSec: 30,
   });
   const [pendingCommands, setPendingCommands] = useState<SyncCommand[]>([]);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
