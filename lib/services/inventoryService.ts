@@ -262,6 +262,51 @@ export async function receiveStockTransfer(
   });
 }
 
+export async function createPurchaseOrder(
+  supplierId: string,
+  supplierName: string,
+  locationId: string,
+  items: Array<{ productId: string; productName: string; sku: string; quantity: number; unitCost: number }>,
+  actorName: string,
+  actorId: string,
+  notes?: string
+): Promise<PurchaseOrder> {
+  const poId = `po_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const poNumber = `PO-2026-${Math.floor(100 + Math.random() * 900)}`;
+  const now = new Date().toISOString();
+  const totalCost = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
+
+  const po: PurchaseOrder = {
+    id: poId,
+    poNumber,
+    supplierId,
+    supplierName,
+    locationId,
+    status: 'ORDERED',
+    items: items.map(it => ({ ...it, receivedQuantity: 0 })),
+    totalCost,
+    orderedAt: now,
+    notes: notes || 'Automated replenishment order generated from Demand Forecasting',
+  };
+
+  await db.transaction('rw', [db.purchaseOrders, db.auditEvents], async () => {
+    await db.purchaseOrders.add(po);
+    await db.auditEvents.add({
+      id: `aud_${Date.now()}`,
+      timestamp: now,
+      actorId,
+      actorName,
+      action: 'PURCHASE_ORDER_CREATED',
+      entityType: 'PURCHASE_ORDER',
+      entityId: poNumber,
+      details: `Created PO ${poNumber} for ${supplierName} (${items.length} items, total $${totalCost.toFixed(2)})`,
+      locationId,
+    });
+  });
+
+  return po;
+}
+
 export interface CSVInventoryRow {
   sku: string;
   name: string;

@@ -19,6 +19,7 @@ import {
   Layers,
   ArrowUpRight,
   Flame,
+  TrendingUp,
 } from 'lucide-react';
 import type { Product, Category, InventoryMovement, Location, Sale, User as StaffUser } from '@/lib/types';
 import { db } from '@/lib/db';
@@ -26,6 +27,7 @@ import { adjustStock } from '@/lib/services/inventoryService';
 import { sound } from '@/lib/audio';
 import { BulkImportModal } from './BulkImportModal';
 import { LocationHeatmap } from './LocationHeatmap';
+import { DemandForecasting } from './DemandForecasting';
 
 interface InventoryViewProps {
   products: Product[];
@@ -55,6 +57,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [isAlertBannerDismissed, setIsAlertBannerDismissed] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [showLocationHeatmap, setShowLocationHeatmap] = useState(true);
+  const [showDemandForecasting, setShowDemandForecasting] = useState(true);
 
   // Automated Low Stock Statistics Calculation
   const lowStockStats = useMemo(() => {
@@ -232,6 +235,22 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
+            id="toggle-demand-forecasting-btn"
+            onClick={() => {
+              sound.playClick();
+              setShowDemandForecasting(prev => !prev);
+            }}
+            className={`px-4 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition shadow-xs ${
+              showDemandForecasting
+                ? 'bg-sky-600/20 border-sky-500/40 text-sky-300'
+                : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4 text-sky-400" />
+            <span>{showDemandForecasting ? 'Hide Forecasting' : 'Demand Forecasting'}</span>
+          </button>
+
+          <button
             id="toggle-location-heatmap-btn"
             onClick={() => {
               sound.playClick();
@@ -338,6 +357,26 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Predictive Demand Forecasting & Stock Depletion Projections */}
+      {showDemandForecasting && (
+        <DemandForecasting
+          products={products}
+          categories={categories}
+          sales={sales}
+          movements={movements}
+          locations={locations}
+          currencySymbol={currentLocation.currencySymbol}
+          currentLocation={currentLocation}
+          currentUser={currentUser}
+          onRefreshData={onRefreshData}
+          onQuickRestockClick={(product, recommendedQty) => {
+            setAdjustingProduct(product);
+            setAdjustQuantity(recommendedQty);
+            setAdjustReason(`Forecasting replenishment recommendation (+${recommendedQty})`);
+          }}
+        />
       )}
 
       {/* Interactive Multi-Location Stock Consumption Heatmap (Recharts) */}

@@ -88,6 +88,16 @@ export default function NexoraPOSApp() {
       const pCount = await db.products.count();
       if (pCount === 0) {
         await seedDatabase();
+      } else {
+        const sCount = await db.sales.count();
+        if (sCount === 0) {
+          const { INITIAL_SALES, INITIAL_PURCHASE_ORDERS } = await import('@/lib/mockData');
+          await db.sales.bulkAdd(INITIAL_SALES);
+          const poCount = await db.purchaseOrders.count();
+          if (poCount === 0) {
+            await db.purchaseOrders.bulkAdd(INITIAL_PURCHASE_ORDERS);
+          }
+        }
       }
 
       const [
