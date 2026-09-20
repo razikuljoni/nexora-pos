@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Settings,
   Building,
@@ -15,10 +15,16 @@ import {
   Shield,
   Volume2,
   VolumeX,
+  ShieldCheck,
+  Download,
+  Lock,
+  FileCheck,
+  Archive,
 } from 'lucide-react';
 import type { Location, Register, User as StaffUser, BusinessMode } from '@/lib/types';
 import { seedDatabase } from '@/lib/mockData';
 import { sound } from '@/lib/audio';
+import { ExportArchiveModal } from './ExportArchiveModal';
 
 interface SettingsViewProps {
   locations: Location[];
@@ -50,6 +56,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onRefreshData,
 }) => {
   const [isResetting, setIsResetting] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [lastBackupDate, setLastBackupDate] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('nexora_last_backup_at');
+    }
+    return null;
+  });
 
   const handleResetData = async () => {
     if (confirm('Are you sure you want to reset offline IndexedDB storage with fresh demo data?')) {
@@ -225,6 +238,75 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
+        {/* Secure Data Archive & Off-Site Storage */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                Export Data Archive
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                  AES-256-GCM
+                </span>
+              </h2>
+              <p className="text-xs text-slate-400">Secure encrypted JSON backup for off-site disaster recovery</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Cipher Protocol:</span>
+              <span className="font-mono text-sky-400 font-semibold flex items-center gap-1">
+                <Lock className="w-3 h-3" /> AES-256-GCM + PBKDF2
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Payload Format:</span>
+              <span className="font-mono text-emerald-400 font-semibold">Immutable JSON Archive</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Last Off-Site Archive:</span>
+              <span className="font-mono text-slate-300">
+                {lastBackupDate
+                  ? new Date(lastBackupDate).toLocaleDateString() +
+                    ' ' +
+                    new Date(lastBackupDate).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : 'No archives created yet'}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            <button
+              id="btn-open-export-archive-modal"
+              onClick={() => {
+                sound.playClick();
+                setIsExportModalOpen(true);
+              }}
+              className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-sky-950"
+            >
+              <Download className="w-4 h-4" />
+              Export Encrypted Database Backup
+            </button>
+            <button
+              id="btn-verify-archive-modal"
+              onClick={() => {
+                sound.playClick();
+                setIsExportModalOpen(true);
+              }}
+              className="w-full py-2 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-medium transition flex items-center justify-center gap-1.5"
+            >
+              <FileCheck className="w-3.5 h-3.5 text-slate-400" />
+              Verify / Decrypt Existing Backup
+            </button>
+          </div>
+        </div>
+
         {/* Local IndexedDB Diagnostics & Reset */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
           <div className="flex items-center gap-3">
@@ -262,6 +344,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Export Data Archive Modal */}
+      <ExportArchiveModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        currentUser={currentUser}
+        allUsers={users}
+        onBackupExported={() => setLastBackupDate(new Date().toISOString())}
+      />
     </div>
   );
 };
