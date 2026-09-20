@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Package,
   Search,
@@ -45,6 +45,8 @@ interface InventoryViewProps {
   currentLocation: Location;
   currentUser: StaffUser;
   onRefreshData: () => Promise<void>;
+  pendingAction?: { action: string; payload?: any; timestamp: number } | null;
+  onClearPendingAction?: () => void;
 }
 
 export const InventoryView: React.FC<InventoryViewProps> = ({
@@ -56,6 +58,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   currentLocation,
   currentUser,
   onRefreshData,
+  pendingAction,
+  onClearPendingAction,
 }) => {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -117,6 +121,36 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [newMinStock, setNewMinStock] = useState('5');
   const [newUnit, setNewUnit] = useState('piece');
   const [newImage, setNewImage] = useState('');
+
+  // Handle actions from Command Palette or external events
+  useEffect(() => {
+    if (pendingAction) {
+      const timer = setTimeout(() => {
+        if (pendingAction.action === 'ADD_NEW_PRODUCT') {
+          setIsNewProductModal(true);
+        } else if (pendingAction.action === 'VIEW_LOW_STOCK') {
+          setOnlyLowStock(true);
+          setStockFilter('BELOW_THRESHOLD');
+        }
+        onClearPendingAction?.();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingAction, onClearPendingAction]);
+
+  useEffect(() => {
+    const handleInventoryEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ action: string; payload?: any }>;
+      if (customEvent.detail?.action === 'ADD_NEW_PRODUCT') {
+        setIsNewProductModal(true);
+      } else if (customEvent.detail?.action === 'VIEW_LOW_STOCK') {
+        setOnlyLowStock(true);
+        setStockFilter('BELOW_THRESHOLD');
+      }
+    };
+    window.addEventListener('nexora:inventory-action', handleInventoryEvent);
+    return () => window.removeEventListener('nexora:inventory-action', handleInventoryEvent);
+  }, []);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {

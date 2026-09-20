@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Search,
   Barcode,
@@ -54,6 +54,9 @@ interface CheckoutViewProps {
   heldOrders: HeldOrder[];
   customers: Customer[];
   onRefreshData: () => Promise<void>;
+  pendingAction?: { action: string; payload?: any; timestamp: number } | null;
+  onClearPendingAction?: () => void;
+  onCartItemsCountChange?: (count: number) => void;
 }
 
 export const CheckoutView: React.FC<CheckoutViewProps> = ({
@@ -67,6 +70,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   heldOrders,
   customers,
   onRefreshData,
+  pendingAction,
+  onClearPendingAction,
+  onCartItemsCountChange,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -329,13 +335,97 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     }
   };
 
+  const handleClearCart = useCallback(() => {
+    sound.playClick();
+    setCartItems([]);
+    setSelectedCustomer(undefined);
+    setWholeCartDiscountPercent(0);
+  }, []);
+
   const handleHoldOrderRef = useRef(handleHoldOrder);
+  const handlePrintLastReceiptRef = useRef(handlePrintLastReceipt);
   const cartItemsCountRef = useRef(cartItems.length);
 
   useEffect(() => {
     handleHoldOrderRef.current = handleHoldOrder;
+    handlePrintLastReceiptRef.current = handlePrintLastReceipt;
     cartItemsCountRef.current = cartItems.length;
+    onCartItemsCountChange?.(cartItems.length);
   });
+
+  // Handle actions triggered from Global Command Palette or hotkeys
+  const handleExecuteExternalAction = useCallback(
+    (action: string, payload?: any) => {
+      if (action === 'OPEN_SCANNER') {
+        setIsScannerOpen(true);
+      } else if (action === 'REPRINT_LAST_RECEIPT') {
+        handlePrintLastReceiptRef.current();
+      } else if (action === 'HOLD_ORDER') {
+        if (cartItemsCountRef.current > 0) {
+          handleHoldOrderRef.current();
+        } else {
+          sound.playError();
+          setQuickNotice('Cart is empty. Add items before holding order.');
+          setTimeout(() => setQuickNotice(null), 3000);
+        }
+      } else if (action === 'VIEW_HELD_ORDERS') {
+        setIsHeldDrawerOpen(true);
+      } else if (action === 'START_RETURN') {
+        setIsQuickReturnOpen(true);
+      } else if (action === 'SELECT_CUSTOMER') {
+        setIsCustomerModalOpen(true);
+      } else if (action === 'CLEAR_CART') {
+        if (cartItemsCountRef.current > 0) {
+          handleClearCart();
+          setQuickNotice('Cart cleared');
+          setTimeout(() => setQuickNotice(null), 3000);
+        }
+      } else if (action === 'APPLY_DISCOUNT') {
+        const percent = payload?.percent || 0;
+        setWholeCartDiscountPercent(percent);
+        sound.playClick();
+        setQuickNotice(`Applied ${percent}% cart discount`);
+        setTimeout(() => setQuickNotice(null), 3000);
+      } else if (action === 'ADD_TO_CART' && payload?.product) {
+        const p = payload.product;
+        if (p.modifierGroups && p.modifierGroups.length > 0) {
+          setActiveModifierProduct(p);
+        } else {
+          addItemToCart(p, [], undefined);
+          sound.playScanBeep();
+          setQuickNotice(`Added "${p.name}" to cart`);
+          setTimeout(() => setQuickNotice(null), 3000);
+        }
+      } else if (action === 'FOCUS_SEARCH') {
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    },
+    [handleClearCart]
+  );
+
+  // React to prop-based pendingAction
+  useEffect(() => {
+    if (pendingAction) {
+      const timer = setTimeout(() => {
+        handleExecuteExternalAction(pendingAction.action, pendingAction.payload);
+        onClearPendingAction?.();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingAction, onClearPendingAction, handleExecuteExternalAction]);
+
+  // React to window custom event 'nexora:pos-action'
+  useEffect(() => {
+    const handlePosEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ action: string; payload?: any }>;
+      if (customEvent.detail?.action) {
+        handleExecuteExternalAction(customEvent.detail.action, customEvent.detail.payload);
+      }
+    };
+    window.addEventListener('nexora:pos-action', handlePosEvent);
+    return () => window.removeEventListener('nexora:pos-action', handlePosEvent);
+  }, [handleExecuteExternalAction]);
 
   // Keyboard Shortcuts (F2 search, F4 customer, F6 hold, F8 payment, Esc clear)
   useEffect(() => {

@@ -17,6 +17,8 @@ import {
   ShieldCheck,
   RefreshCw,
   Sparkles,
+  Search,
+  Command,
 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { seedDatabase, INITIAL_LOCATIONS, INITIAL_REGISTERS, INITIAL_USERS } from '@/lib/mockData';
@@ -45,6 +47,7 @@ import { InventoryView } from '@/components/inventory/InventoryView';
 import { OrdersView } from '@/components/orders/OrdersView';
 import { SettingsView } from '@/components/settings/SettingsView';
 import { OfflineConfidenceModal } from '@/components/offline/OfflineConfidenceModal';
+import { CommandPalette } from '@/components/command/CommandPalette';
 
 export default function NexoraPOSApp() {
   const [activeTab, setActiveTab] = useState<'checkout' | 'shifts' | 'inventory' | 'orders' | 'settings'>('checkout');
@@ -77,6 +80,13 @@ export default function NexoraPOSApp() {
   const [isConfidenceModalOpen, setIsConfidenceModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [audioMuted, setAudioMuted] = useState(false);
+
+  // Global Command Palette & Quick Action State
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [cartItemsCount, setCartItemsCount] = useState(0);
+  const [pendingCheckoutAction, setPendingCheckoutAction] = useState<{ action: string; payload?: any; timestamp: number } | null>(null);
+  const [pendingInventoryAction, setPendingInventoryAction] = useState<{ action: string; payload?: any; timestamp: number } | null>(null);
+  const [commandToast, setCommandToast] = useState<{ message: string; id: number } | null>(null);
 
   const { isInstallable, install } = usePWAInstall();
 
@@ -195,9 +205,13 @@ export default function NexoraPOSApp() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Global keyboard listener for tabs (F1 for Checkout)
+    // Global keyboard listener for tabs & Command Palette (Ctrl+K, Cmd+K, F1)
     const handleGlobalKeys = (e: KeyboardEvent) => {
-      if (e.key === 'F1') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        sound.playClick();
+        setIsCommandPaletteOpen(prev => !prev);
+      } else if (e.key === 'F1') {
         e.preventDefault();
         setActiveTab('checkout');
       }
@@ -213,11 +227,141 @@ export default function NexoraPOSApp() {
     };
   }, [refreshData, isSimulatedOffline, handleTriggerSync]);
 
-  const toggleSound = () => {
+  const toggleSound = useCallback(() => {
     const next = !audioMuted;
     setAudioMuted(next);
     sound.setMuted(next);
-  };
+  }, [audioMuted]);
+
+  const showToast = useCallback((message: string) => {
+    setCommandToast({ message, id: Date.now() });
+    setTimeout(() => {
+      setCommandToast(prev => (prev?.message === message ? null : prev));
+    }, 3200);
+  }, []);
+
+  // Handle actions executed from Global Command Palette
+  const handleCommandQuickAction = useCallback(
+    async (actionId: string, payload?: any) => {
+      if (actionId === 'NO_SALE_DRAWER_KICK') {
+        sound.playSaleSuccess();
+        showToast('Cash drawer opened (No-Sale kick logged to audit trail)');
+        try {
+          await db.auditEvents.add({
+            id: `aud_${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            actorId: currentUser.id,
+            actorName: currentUser.name,
+            action: 'DRAWER_KICK_NO_SALE',
+            entityType: 'REGISTER',
+            entityId: currentRegister.id,
+            details: `Cashier ${currentUser.name} triggered No-Sale drawer kick via Command Palette`,
+            locationId: currentLocation.id,
+          });
+        } catch (err) {
+          console.error('[CommandPalette] Audit log error:', err);
+        }
+      } else if (actionId === 'REPRINT_LAST_RECEIPT') {
+        setActiveTab('checkout');
+        setPendingCheckoutAction({ action: 'REPRINT_LAST_RECEIPT', timestamp: Date.now() });
+        showToast('Opening last completed receipt...');
+      } else if (actionId === 'OPEN_SCANNER') {
+        setActiveTab('checkout');
+        setPendingCheckoutAction({ action: 'OPEN_SCANNER', timestamp: Date.now() });
+      } else if (actionId === 'HOLD_ORDER') {
+        setActiveTab('checkout');
+        setPendingCheckoutAction({ action: 'HOLD_ORDER', timestamp: Date.now() });
+      } else if (actionId === 'VIEW_HELD_ORDERS') {
+        setActiveTab('checkout');
+        setPendingCheckoutAction({ action: 'VIEW_HELD_ORDERS', timestamp: Date.now() });
+      } else if (actionId === 'START_RETURN') {
+        setActiveTab('checkout');
+        setPendingCheckoutAction({ action: 'START_RETURN', timestamp: Date.now() });
+      } else if (actionId === 'SELECT_CUSTOMER') {
+        setActiveTab('checkout');
+        setPendingCheckoutAction({ action: 'SELECT_CUSTOMER', timestamp: Date.now() });
+      } else if (actionId === 'CLEAR_CART') {
+        setActiveTab('checkout');
+        setPendingCheckoutAction({ action: 'CLEAR_CART', timestamp: Date.now() });
+        showToast('Cleared active cart');
+      } else if (actionId === 'APPLY_DISCOUNT') {
+        setActiveTab('checkout');
+        setPendingCheckoutAction({ action: 'APPLY_DISCOUNT', payload, timestamp: Date.now() });
+        showToast(`Applied ${payload?.percent}% cart discount`);
+      } else if (actionId === 'OPEN_PRINT_QUEUE') {
+        setActiveTab('settings');
+        showToast('Navigated to Thermal Print Queue');
+        setTimeout(() => {
+          document.getElementById('settings-thermal-print-queue')?.scrollIntoView({ behavior: 'smooth' });
+        }, 120);
+      } else if (actionId === 'SYNC_OUTBOX') {
+        showToast('Synchronizing offline outbox with cloud server...');
+        await handleTriggerSync();
+      } else if (actionId === 'OPEN_OFFLINE_DIAGNOSTICS') {
+        setIsConfidenceModalOpen(true);
+      } else if (actionId === 'TOGGLE_OFFLINE') {
+        const next = !isSimulatedOffline;
+        setIsSimulatedOffline(next);
+        sound.playClick();
+        showToast(next ? 'Simulating Offline Mode (Disconnected)' : 'Restored Online Mode (Reconnected)');
+      } else if (actionId === 'TOGGLE_SOUND') {
+        toggleSound();
+        showToast(!audioMuted ? 'Web Audio Haptics Muted' : 'Web Audio Haptics Unmuted');
+      } else if (actionId === 'TOGGLE_BUSINESS_MODE') {
+        const next = businessMode === 'RETAIL' ? 'CAFE' : 'RETAIL';
+        setBusinessMode(next);
+        sound.playClick();
+        showToast(`Switched Business Mode to ${next === 'RETAIL' ? 'Retail High-Speed' : 'Café / QSR'}`);
+      } else if (actionId === 'SWITCH_LOCATION' && payload?.location) {
+        setCurrentLocation(payload.location);
+        sound.playClick();
+        showToast(`Active location: ${payload.location.name}`);
+        refreshData();
+      } else if (actionId === 'SWITCH_USER' && payload?.user) {
+        setCurrentUser(payload.user);
+        sound.playClick();
+        showToast(`Active cashier: ${payload.user.name} (${payload.user.role})`);
+      } else if (actionId === 'ADD_NEW_PRODUCT') {
+        setActiveTab('inventory');
+        setPendingInventoryAction({ action: 'ADD_NEW_PRODUCT', timestamp: Date.now() });
+      } else if (actionId === 'VIEW_LOW_STOCK') {
+        setActiveTab('inventory');
+        setPendingInventoryAction({ action: 'VIEW_LOW_STOCK', timestamp: Date.now() });
+        showToast('Filtered inventory to Low Stock & Depleted SKUs');
+      } else if (actionId === 'EXPORT_BACKUP') {
+        setActiveTab('settings');
+        showToast('Navigated to Encrypted Backup section');
+        setTimeout(() => {
+          document.getElementById('btn-open-export-archive-modal')?.click();
+        }, 150);
+      }
+    },
+    [
+      currentUser,
+      currentRegister,
+      currentLocation,
+      isSimulatedOffline,
+      audioMuted,
+      businessMode,
+      handleTriggerSync,
+      showToast,
+      refreshData,
+      toggleSound,
+    ]
+  );
+
+  const handleAddProductFromPalette = useCallback(
+    (product: Product) => {
+      setActiveTab('checkout');
+      setPendingCheckoutAction({
+        action: 'ADD_TO_CART',
+        payload: { product },
+        timestamp: Date.now(),
+      });
+      showToast(`Added "${product.name}" to cart`);
+    },
+    [showToast]
+  );
 
   if (isLoading) {
     return (
@@ -276,6 +420,25 @@ export default function NexoraPOSApp() {
                 <span>ONLINE {pendingSyncCommands.length > 0 ? `(${pendingSyncCommands.length} pending)` : ''}</span>
               </>
             )}
+          </button>
+
+          {/* Global Command Palette Omnibar Trigger */}
+          <button
+            id="btn-open-command-palette"
+            type="button"
+            onClick={() => {
+              sound.playClick();
+              setIsCommandPaletteOpen(true);
+            }}
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 text-xs transition cursor-pointer"
+            title="Open Global Command Palette (Ctrl+K or ⌘K)"
+          >
+            <Search className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            <span className="hidden lg:inline text-[11px] text-slate-300 font-medium">Search products or actions...</span>
+            <span className="lg:hidden text-[11px] text-slate-300 font-medium">Search...</span>
+            <kbd className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700 rounded-md">
+              <span className="text-[9px]">⌘</span>K
+            </kbd>
           </button>
         </div>
 
@@ -478,6 +641,9 @@ export default function NexoraPOSApp() {
             heldOrders={heldOrders}
             customers={customers}
             onRefreshData={refreshData}
+            pendingAction={pendingCheckoutAction}
+            onClearPendingAction={() => setPendingCheckoutAction(null)}
+            onCartItemsCountChange={count => setCartItemsCount(count)}
           />
         )}
 
@@ -502,6 +668,8 @@ export default function NexoraPOSApp() {
             currentLocation={currentLocation}
             currentUser={currentUser}
             onRefreshData={refreshData}
+            pendingAction={pendingInventoryAction}
+            onClearPendingAction={() => setPendingInventoryAction(null)}
           />
         )}
 
@@ -531,6 +699,41 @@ export default function NexoraPOSApp() {
           />
         )}
       </main>
+
+      {/* Global Command Palette Modal (Ctrl+K / Cmd+K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        products={products}
+        categories={categories}
+        locations={locations}
+        currentLocation={currentLocation}
+        registers={registers}
+        currentRegister={currentRegister}
+        users={users}
+        currentUser={currentUser}
+        businessMode={businessMode}
+        activeTab={activeTab}
+        cartItemsCount={cartItemsCount}
+        isActuallyOffline={isActuallyOffline}
+        audioMuted={audioMuted}
+        onSelectTab={tab => {
+          setActiveTab(tab);
+          sound.playClick();
+        }}
+        onAddProductToCart={handleAddProductFromPalette}
+        onQuickAction={handleCommandQuickAction}
+      />
+
+      {/* Quick Action Global HUD Toast Banner */}
+      {commandToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <div className="px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-sky-500/40 text-sky-200 text-xs font-semibold shadow-2xl shadow-black/80 flex items-center gap-2.5 backdrop-blur-md">
+            <Sparkles className="w-4 h-4 text-sky-400 shrink-0 animate-pulse" />
+            <span>{commandToast.message}</span>
+          </div>
+        </div>
+      )}
 
       {/* Offline Confidence & Sync Diagnostic Modal */}
       <OfflineConfidenceModal
