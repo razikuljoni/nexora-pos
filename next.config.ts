@@ -2,9 +2,6 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: false,
   },
@@ -20,6 +17,9 @@ const nextConfig: NextConfig = {
     ],
   },
   output: 'standalone',
+  // Next.js 16 runs Turbopack by default; empty config silences the
+  // "webpack config without turbopack config" build error.
+  turbopack: {},
   transpilePackages: ['motion'],
   webpack: (config, {dev}) => {
     // HMR is disabled in AI Studio via DISABLE_HMR env var.
