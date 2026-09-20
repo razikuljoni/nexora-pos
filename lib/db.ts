@@ -20,6 +20,7 @@ import type {
   AuditEvent,
   SyncCommand,
   KitchenTicket,
+  PrintJob,
 } from './types';
 
 export class NexoraDatabase extends Dexie {
@@ -42,6 +43,7 @@ export class NexoraDatabase extends Dexie {
   auditEvents!: Table<AuditEvent, string>;
   syncOutbox!: Table<SyncCommand, string>;
   kitchenTickets!: Table<KitchenTicket, string>;
+  printJobs!: Table<PrintJob, string>;
 
   constructor() {
     super('nexora_pos_db');
@@ -65,9 +67,13 @@ export class NexoraDatabase extends Dexie {
       auditEvents: 'id, timestamp, action, actorId, locationId',
       syncOutbox: 'id, status, idempotencyKey, createdAt',
       kitchenTickets: 'id, saleId, orderNumber, status, createdAt',
+      printJobs: 'id, type, status, createdAt, targetId',
+    });
+
+    this.version(2).stores({
+      printJobs: 'id, type, status, createdAt, targetId',
     });
   }
-
 }
 
 export const db = new NexoraDatabase();

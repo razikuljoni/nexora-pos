@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { Sale, Location } from '@/lib/types';
 import { sound } from '@/lib/audio';
+import { printService } from '@/lib/services/printService';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -84,39 +85,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   if (!isOpen || !sale) return null;
 
-  const handlePrint = () => {
-    sound.playClick();
-    if (typeof window !== 'undefined') {
-      window.print();
-    }
-  };
-
-  const handleCopyVerificationLink = async () => {
-    sound.playClick();
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      await navigator.clipboard.writeText(verificationUrl);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2500);
-    }
-  };
-
-  const handleShare = async () => {
-    sound.playClick();
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: `Receipt for ${sale.orderNumber}`,
-          text: `Digital verified receipt from ${location.name} for ${location.currencySymbol}${sale.total.toFixed(2)}`,
-          url: verificationUrl,
-        });
-      } catch {
-        // User dismissed share dialog
-      }
-    } else {
-      handleCopyVerificationLink();
-    }
-  };
-
   // Generate raw ESC/POS monospace stream for thermal receipt printers
   const escPosRaw = `[ESC @]
 [ESC a 1]
@@ -165,6 +133,62 @@ Scan to verify digital receipt
 * ${sale.orderNumber} *
 Thank you for your visit!
 [GS V 0]`;
+
+  const handlePrint = () => {
+    sound.playClick();
+    sound.playPrintFeed();
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
+    // Enqueue print job into print queue spooler
+    printService
+      .enqueuePrintJob({
+        type: 'RECEIPT',
+        title: `Receipt #${sale.orderNumber}`,
+        status: 'COMPLETED',
+        completedAt: new Date().toISOString(),
+        printerName: 'Epson TM-T88VI (Network 80mm)',
+        paperWidth: paperWidth === '58mm' ? '58mm' : '80mm',
+        copies: 1,
+        targetId: sale.id,
+        payloadRaw: escPosRaw,
+        payloadMetadata: {
+          orderNumber: sale.orderNumber,
+          totalAmount: sale.total,
+          cashierName: sale.cashierName,
+          customerName: sale.customerName,
+          locationName: location.name,
+          verificationUrl,
+        },
+      })
+      .catch(err => console.warn('Could not register print job:', err));
+  };
+
+  const handleCopyVerificationLink = async () => {
+    sound.playClick();
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      await navigator.clipboard.writeText(verificationUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
+
+  const handleShare = async () => {
+    sound.playClick();
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `Receipt for ${sale.orderNumber}`,
+          text: `Digital verified receipt from ${location.name} for ${location.currencySymbol}${sale.total.toFixed(2)}`,
+          url: verificationUrl,
+        });
+      } catch {
+        // User dismissed share dialog
+      }
+    } else {
+      handleCopyVerificationLink();
+    }
+  };
 
   const handleCopyEscPos = async () => {
     sound.playClick();

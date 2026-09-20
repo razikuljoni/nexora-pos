@@ -142,6 +142,7 @@ export const ALL_DATABASE_TABLES = [
   'auditEvents',
   'syncOutbox',
   'kitchenTickets',
+  'printJobs',
 ] as const;
 
 export type TableName = (typeof ALL_DATABASE_TABLES)[number];

@@ -144,6 +144,30 @@ class SoundController {
       // silent fallback
     }
   }
+
+  // Thermal printer feed / print chatter sound
+  public playPrintFeed() {
+    if (!this.soundEnabled) return;
+    try {
+      const ctx = this.initCtx();
+      if (!ctx) return;
+      // Multi-step rapid thermal motor tick pulses
+      for (let i = 0; i < 4; i++) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(600 + i * 80, ctx.currentTime + i * 0.05);
+        gain.gain.setValueAtTime(0.04, ctx.currentTime + i * 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.05 + 0.03);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.05);
+        osc.stop(ctx.currentTime + i * 0.05 + 0.03);
+      }
+    } catch {
+      // silent fallback
+    }
+  }
 }
 
 export const sound = new SoundController();

@@ -31,6 +31,7 @@ import { seedDatabase } from '@/lib/mockData';
 import { sound } from '@/lib/audio';
 import { syncEngine, type SyncEngineStatus } from '@/lib/services/syncService';
 import { ExportArchiveModal } from './ExportArchiveModal';
+import { PrintQueueManager } from './PrintQueueManager';
 
 interface SettingsViewProps {
   locations: Location[];
@@ -468,6 +469,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Thermal Print Queue & Spooler Manager */}
+        <PrintQueueManager />
 
         {/* Secure Data Archive & Off-Site Storage */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">

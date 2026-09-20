@@ -17,6 +17,7 @@ import {
 import type { Shift, CashMovement, Location, User as StaffUser } from '@/lib/types';
 import { openShift, recordCashMovement, closeShift } from '@/lib/services/shiftService';
 import { sound } from '@/lib/audio';
+import { printService } from '@/lib/services/printService';
 
 interface ShiftViewProps {
   activeShift?: Shift;
@@ -781,7 +782,60 @@ export const ShiftView: React.FC<ShiftViewProps> = ({
               <button
                 onClick={() => {
                   sound.playClick();
-                  window.print();
+                  sound.playPrintFeed();
+                  if (typeof window !== 'undefined') {
+                    window.print();
+                  }
+                  const totalSales =
+                    selectedZReportShift.cashSales +
+                    selectedZReportShift.cardSales +
+                    selectedZReportShift.mobileSales;
+                  const rawZReport = `********************************
+      OFFICIAL Z-REPORT
+    END OF SHIFT RECONCILIATION
+********************************
+Store    : ${currentLocation.name}
+Register : ${selectedZReportShift.registerId}
+Cashier  : ${selectedZReportShift.cashierName}
+Opened   : ${new Date(selectedZReportShift.openedAt).toLocaleString()}
+Closed   : ${selectedZReportShift.closedAt ? new Date(selectedZReportShift.closedAt).toLocaleString() : 'N/A'}
+--------------------------------
+TOTAL SALES:        ${currentLocation.currencySymbol}${totalSales.toFixed(2)}
+  CASH:             ${currentLocation.currencySymbol}${selectedZReportShift.cashSales.toFixed(2)}
+  CARD:             ${currentLocation.currencySymbol}${selectedZReportShift.cardSales.toFixed(2)}
+  MOBILE:           ${currentLocation.currencySymbol}${selectedZReportShift.mobileSales.toFixed(2)}
+CASH REFUNDS:       ${currentLocation.currencySymbol}${selectedZReportShift.cashRefunds.toFixed(2)}
+--------------------------------
+DRAWER RECONCILIATION:
+  Opening Float:    ${currentLocation.currencySymbol}${selectedZReportShift.openingFloat.toFixed(2)}
+  Cash In/Out:      ${currentLocation.currencySymbol}${(selectedZReportShift.cashIn - selectedZReportShift.cashOut).toFixed(2)}
+  Safe Drops:       ${currentLocation.currencySymbol}${selectedZReportShift.safeDrops.toFixed(2)}
+  Expected Cash:    ${currentLocation.currencySymbol}${selectedZReportShift.expectedCash.toFixed(2)}
+  Counted Cash:     ${currentLocation.currencySymbol}${(selectedZReportShift.countedCash || 0).toFixed(2)}
+  Variance:         ${currentLocation.currencySymbol}${(selectedZReportShift.variance || 0).toFixed(2)}
+--------------------------------
+Audit Verified • End of Shift Ledger
+********************************`;
+
+                  printService
+                    .enqueuePrintJob({
+                      type: 'Z_REPORT',
+                      title: `Shift Z-Report #${selectedZReportShift.id.slice(0, 8)}`,
+                      status: 'COMPLETED',
+                      completedAt: new Date().toISOString(),
+                      printerName: 'Epson TM-T88VI (Network 80mm)',
+                      paperWidth: '80mm',
+                      copies: 1,
+                      targetId: selectedZReportShift.id,
+                      payloadRaw: rawZReport,
+                      payloadMetadata: {
+                        shiftId: selectedZReportShift.id,
+                        totalAmount: totalSales,
+                        cashierName: selectedZReportShift.cashierName,
+                        locationName: currentLocation.name,
+                      },
+                    })
+                    .catch(err => console.warn('Could not register shift print job:', err));
                 }}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold flex items-center gap-2"
               >

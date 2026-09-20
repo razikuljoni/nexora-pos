@@ -381,3 +381,33 @@ export interface KitchenTicket {
   createdAt: string;
   readyAt?: string;
 }
+
+export type PrintJobType = 'RECEIPT' | 'Z_REPORT' | 'X_REPORT' | 'KITCHEN_TICKET' | 'END_OF_DAY';
+export type PrintJobStatus = 'QUEUED' | 'PRINTING' | 'COMPLETED' | 'FAILED';
+
+export interface PrintJob {
+  id: string;
+  type: PrintJobType;
+  title: string;
+  status: PrintJobStatus;
+  createdAt: string;
+  completedAt?: string;
+  lastAttemptAt?: string;
+  error?: string;
+  retryCount: number;
+  maxRetries?: number;
+  printerName: string;
+  paperWidth: '80mm' | '58mm';
+  copies: number;
+  targetId?: string;
+  payloadRaw: string;
+  payloadMetadata?: {
+    orderNumber?: string;
+    totalAmount?: number;
+    cashierName?: string;
+    customerName?: string;
+    shiftId?: string;
+    locationName?: string;
+    verificationUrl?: string;
+  };
+}
