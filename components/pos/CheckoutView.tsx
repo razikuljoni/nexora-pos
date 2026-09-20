@@ -41,6 +41,7 @@ import { HeldOrdersDrawer } from './HeldOrdersDrawer';
 import { CustomerSelectModal } from './CustomerSelectModal';
 import { QuickActionsFloatingMenu } from './QuickActionsFloatingMenu';
 import { QuickReturnModal } from './QuickReturnModal';
+import { SaleConfetti } from './SaleConfetti';
 
 interface CheckoutViewProps {
   products: Product[];
@@ -85,6 +86,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [isQuickReturnOpen, setIsQuickReturnOpen] = useState(false);
   const [quickNotice, setQuickNotice] = useState<string | null>(null);
   const [lastCompletedSale, setLastCompletedSale] = useState<Sale | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -394,7 +396,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         isOffline,
       });
 
+      sound.playSaleSuccess();
       setLastCompletedSale(sale);
+      setShowConfetti(true);
       setIsPaymentOpen(false);
       setIsReceiptOpen(true);
       setCartItems([]);
@@ -916,6 +920,18 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         currencySymbol={currentLocation.currencySymbol}
         grandTotal={grandTotal}
         registerName={currentRegister.name}
+      />
+
+      {/* Subtle Confetti Animation with motion library */}
+      <SaleConfetti
+        isActive={showConfetti}
+        orderNumber={lastCompletedSale?.orderNumber}
+        totalAmount={
+          lastCompletedSale
+            ? `${currentLocation.currencySymbol}${lastCompletedSale.total.toFixed(2)}`
+            : undefined
+        }
+        onComplete={() => setShowConfetti(false)}
       />
 
       {/* Temporary Floating Quick Notice Toast */}
