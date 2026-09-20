@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { syncEngine, type SyncEngineStatus } from '@/lib/services/syncService';
 import type { SyncCommand } from '@/lib/types';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface OfflineConfidenceModalProps {
   isOpen: boolean;
@@ -73,9 +74,16 @@ export const OfflineConfidenceModal: React.FC<OfflineConfidenceModalProps> = ({ 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-        {/* Modal Header */}
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.94, y: 16 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.94, y: 16 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+        >
+          {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-xl ${status.isOnline ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
@@ -274,12 +282,13 @@ export const OfflineConfidenceModal: React.FC<OfflineConfidenceModalProps> = ({ 
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium transition"
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium transition cursor-pointer"
           >
             Close Diagnostics
           </button>
         </div>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 };

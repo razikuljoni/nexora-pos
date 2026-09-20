@@ -40,6 +40,7 @@ import {
   Flame,
 } from 'lucide-react';
 import { sound } from '@/lib/audio';
+import { motion, AnimatePresence } from 'motion/react';
 import type {
   Product,
   Category,
@@ -621,23 +622,28 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div
-      id="global-command-palette-backdrop"
-      className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 md:pt-16 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
-      onClick={e => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
+    <AnimatePresence>
       <div
-        id="global-command-palette-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Command Palette"
-        className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl shadow-black/90 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-150"
+        id="global-command-palette-backdrop"
+        className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 md:pt-16 bg-black/75 backdrop-blur-sm"
+        onClick={e => {
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
       >
-        {/* Top Search Input Box */}
+        <motion.div
+          id="global-command-palette-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Command Palette"
+          initial={{ opacity: 0, scale: 0.95, y: -10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: -10 }}
+          transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl shadow-black/90 overflow-hidden flex flex-col max-h-[85vh]"
+        >
+          {/* Top Search Input Box */}
         <div className="relative border-b border-slate-800 bg-slate-950/90 px-4 py-3.5 flex items-center gap-3">
           <Search className="w-5 h-5 text-sky-400 shrink-0" />
           <input
@@ -912,7 +918,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             <span className="font-mono text-[10px] text-sky-400 font-bold">NEXORA Omnibar</span>
           </div>
         </div>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 };

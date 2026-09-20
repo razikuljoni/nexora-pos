@@ -26,6 +26,7 @@ import { seedDatabase, INITIAL_LOCATIONS, INITIAL_REGISTERS, INITIAL_USERS } fro
 import { sound } from '@/lib/audio';
 import { syncEngine, syncOutbox } from '@/lib/services/syncService';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
+import { motion, AnimatePresence } from 'motion/react';
 import type {
   Product,
   Category,
@@ -688,94 +689,105 @@ export default function NexoraPOSApp() {
 
       {/* Main Content Workspace */}
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden pb-16 lg:pb-0">
-        {activeTab === 'checkout' && (
-          <CheckoutView
-            products={products}
-            categories={categories}
-            currentLocation={currentLocation}
-            currentRegister={currentRegister}
-            currentUser={currentUser}
-            businessMode={businessMode}
-            isOffline={isActuallyOffline}
-            heldOrders={heldOrders}
-            customers={customers}
-            onRefreshData={refreshData}
-            pendingAction={pendingCheckoutAction}
-            onClearPendingAction={() => setPendingCheckoutAction(null)}
-            onCartItemsCountChange={count => setCartItemsCount(count)}
-          />
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="flex-1 flex flex-col min-h-0 overflow-hidden"
+          >
+            {activeTab === 'checkout' && (
+              <CheckoutView
+                products={products}
+                categories={categories}
+                currentLocation={currentLocation}
+                currentRegister={currentRegister}
+                currentUser={currentUser}
+                businessMode={businessMode}
+                isOffline={isActuallyOffline}
+                heldOrders={heldOrders}
+                customers={customers}
+                onRefreshData={refreshData}
+                pendingAction={pendingCheckoutAction}
+                onClearPendingAction={() => setPendingCheckoutAction(null)}
+                onCartItemsCountChange={count => setCartItemsCount(count)}
+              />
+            )}
 
-        {activeTab === 'shifts' && (
-          <ShiftView
-            activeShift={activeShift}
-            pastShifts={pastShifts}
-            cashMovements={cashMovements}
-            currentLocation={currentLocation}
-            currentUser={currentUser}
-            onRefreshData={refreshData}
-          />
-        )}
+            {activeTab === 'shifts' && (
+              <ShiftView
+                activeShift={activeShift}
+                pastShifts={pastShifts}
+                cashMovements={cashMovements}
+                currentLocation={currentLocation}
+                currentUser={currentUser}
+                onRefreshData={refreshData}
+              />
+            )}
 
-        {activeTab === 'inventory' && (
-          <InventoryView
-            products={products}
-            categories={categories}
-            movements={inventoryMovements}
-            locations={locations}
-            sales={sales}
-            currentLocation={currentLocation}
-            currentUser={currentUser}
-            onRefreshData={refreshData}
-            pendingAction={pendingInventoryAction}
-            onClearPendingAction={() => setPendingInventoryAction(null)}
-          />
-        )}
+            {activeTab === 'inventory' && (
+              <InventoryView
+                products={products}
+                categories={categories}
+                movements={inventoryMovements}
+                locations={locations}
+                sales={sales}
+                currentLocation={currentLocation}
+                currentUser={currentUser}
+                onRefreshData={refreshData}
+                pendingAction={pendingInventoryAction}
+                onClearPendingAction={() => setPendingInventoryAction(null)}
+              />
+            )}
 
-        {activeTab === 'orders' && (
-          <OrdersView
-            sales={sales}
-            currentLocation={currentLocation}
-            currentUser={currentUser}
-            onRefreshData={refreshData}
-          />
-        )}
+            {activeTab === 'orders' && (
+              <OrdersView
+                sales={sales}
+                currentLocation={currentLocation}
+                currentUser={currentUser}
+                onRefreshData={refreshData}
+              />
+            )}
 
-        {activeTab === 'dashboard' && (
-          <ManagerDashboardView
-            sales={sales}
-            products={products}
-            categories={categories}
-            currentLocation={currentLocation}
-            currentRegister={currentRegister}
-            currentUser={currentUser}
-            activeShift={activeShift}
-            cashMovements={cashMovements}
-            isOffline={isActuallyOffline}
-            onRefreshData={refreshData}
-            onNavigateToTab={tab => {
-              setActiveTab(tab as any);
-              sound.playClick();
-            }}
-          />
-        )}
+            {activeTab === 'dashboard' && (
+              <ManagerDashboardView
+                sales={sales}
+                products={products}
+                categories={categories}
+                currentLocation={currentLocation}
+                currentRegister={currentRegister}
+                currentUser={currentUser}
+                activeShift={activeShift}
+                cashMovements={cashMovements}
+                isOffline={isActuallyOffline}
+                onRefreshData={refreshData}
+                onNavigateToTab={tab => {
+                  setActiveTab(tab as any);
+                  sound.playClick();
+                }}
+              />
+            )}
 
-        {activeTab === 'settings' && (
-          <SettingsView
-            locations={locations}
-            currentLocation={currentLocation}
-            registers={registers}
-            currentRegister={currentRegister}
-            users={users}
-            currentUser={currentUser}
-            businessMode={businessMode}
-            onSetBusinessMode={mode => setBusinessMode(mode)}
-            onSwitchLocation={loc => setCurrentLocation(loc)}
-            onSwitchRegister={reg => setCurrentRegister(reg)}
-            onSwitchUser={usr => setCurrentUser(usr)}
-            onRefreshData={refreshData}
-          />
-        )}
+            {activeTab === 'settings' && (
+              <SettingsView
+                locations={locations}
+                currentLocation={currentLocation}
+                registers={registers}
+                currentRegister={currentRegister}
+                users={users}
+                currentUser={currentUser}
+                businessMode={businessMode}
+                onSetBusinessMode={mode => setBusinessMode(mode)}
+                onSwitchLocation={loc => setCurrentLocation(loc)}
+                onSwitchRegister={reg => setCurrentRegister(reg)}
+                onSwitchUser={usr => setCurrentUser(usr)}
+                onRefreshData={refreshData}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Global Command Palette Modal (Ctrl+K / Cmd+K) */}
