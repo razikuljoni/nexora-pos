@@ -4,21 +4,19 @@
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-RUN corepack enable pnpm
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
 # Stage 2: Source builder
 FROM node:20-alpine AS builder
 WORKDIR /app
-RUN corepack enable pnpm
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-RUN pnpm run build
+RUN npm install -g pnpm && pnpm run build
 
 # Stage 3: Minimal runtime container
 FROM node:20-alpine AS runner
