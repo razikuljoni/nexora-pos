@@ -37,10 +37,11 @@ import { sound } from '@/lib/audio';
 import { SalesChartWidget } from './SalesChartWidget';
 import { SalesHeatmapWidget } from './SalesHeatmapWidget';
 import { LowStockAlertsWidget } from './LowStockAlertsWidget';
+import { PredictiveForecastingWidget } from './PredictiveForecastingWidget';
 import { CategoryBreakdownWidget } from './CategoryBreakdownWidget';
 import { RegisterPulseWidget } from './RegisterPulseWidget';
 
-const LOCAL_STORAGE_KEY = 'nexora_manager_dashboard_layout_v2';
+const LOCAL_STORAGE_KEY = 'nexora_manager_dashboard_layout_v3';
 
 export interface WidgetConfig {
   id: string;
@@ -52,6 +53,14 @@ export interface WidgetConfig {
 }
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
+  {
+    id: 'predictive_forecasting',
+    title: 'Predictive Inventory & Seasonality Demand Forecasting',
+    subtitle: 'Run-rate velocity, day-of-week seasonality, and automated PO reorder suggestions',
+    iconName: 'Sparkles',
+    colSpan: 2,
+    isVisible: true,
+  },
   {
     id: 'sales_chart',
     title: 'Sales Volume & Velocity Chart',
@@ -277,6 +286,18 @@ export const ManagerDashboardView: React.FC<ManagerDashboardViewProps> = ({
 
   const renderWidgetContent = (id: string) => {
     switch (id) {
+      case 'predictive_forecasting':
+        return (
+          <PredictiveForecastingWidget
+            sales={sales}
+            products={products}
+            categories={categories}
+            currentLocation={currentLocation}
+            currentUser={currentUser}
+            onRefreshData={onRefreshData}
+            onNavigateToInventory={() => onNavigateToTab?.('inventory')}
+          />
+        );
       case 'sales_chart':
         return (
           <SalesChartWidget
@@ -330,6 +351,8 @@ export const ManagerDashboardView: React.FC<ManagerDashboardViewProps> = ({
 
   const getWidgetIcon = (iconName: string) => {
     switch (iconName) {
+      case 'Sparkles':
+        return <Sparkles className="w-4 h-4 text-sky-400" />;
       case 'TrendingUp':
         return <TrendingUp className="w-4 h-4 text-sky-400" />;
       case 'Flame':
