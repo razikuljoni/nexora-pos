@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { matchCuratedPreset, generateVectorPlaceholder } from '@/lib/catalogImages';
 
+export const runtime = 'edge';
+
 // Lazy initialization of GoogleGenAI client (server-side only)
 let aiClient: GoogleGenAI | null = null;
 
