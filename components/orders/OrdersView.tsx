@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   FileText,
   Search,
@@ -46,15 +46,20 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const [restockInventory, setRestockInventory] = useState(true);
   const [refundTender, setRefundTender] = useState<'CASH' | 'CARD' | 'STORE_CREDIT'>('CASH');
 
-  const filteredSales = sales.filter(s => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      s.orderNumber.toLowerCase().includes(q) ||
-      (s.customerName && s.customerName.toLowerCase().includes(q)) ||
-      s.cashierName.toLowerCase().includes(q)
-    );
-  });
+  // ⚡ Bolt Optimization: Memoize sales filtering to prevent O(n) recalculation on every render
+  // and hoist string operations outside the loop to avoid redundant calculations.
+  const filteredSales = useMemo(() => {
+    const trimmedSearch = search.trim();
+    if (!trimmedSearch) return sales;
+    const q = trimmedSearch.toLowerCase();
+    return sales.filter(s => {
+      return (
+        s.orderNumber.toLowerCase().includes(q) ||
+        (s.customerName && s.customerName.toLowerCase().includes(q)) ||
+        s.cashierName.toLowerCase().includes(q)
+      );
+    });
+  }, [sales, search]);
 
   const handleOpenRefundModal = (sale: Sale) => {
     sound.playClick();
