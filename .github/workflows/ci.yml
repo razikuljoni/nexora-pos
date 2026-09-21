@@ -1,4 +1,4 @@
-name: NEXORA POS - CI/CD & Deployments
+name: NEXORA POS - CI/CD Pipeline
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'pnpm'
 
       - name: Install Dependencies
@@ -40,12 +40,11 @@ jobs:
       - name: Verify TypeScript Type Safety
         run: npx tsc --noEmit
 
-  build-vercel:
-    name: Build & Deploy (Vercel)
+  build:
+    name: Production Build & Cloudflare Bundle Check
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
     steps:
       - name: Checkout Code
@@ -59,32 +58,34 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'pnpm'
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Production Application
+      - name: Build Production Next.js App
         run: pnpm build
         env:
           NODE_ENV: production
           NEXT_TELEMETRY_DISABLED: '1'
 
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
+      - name: Build Cloudflare Pages Bundle
+        run: pnpm pages:build
+
+      - name: Verify Cloudflare Pages Output
+        run: |
+          test -d .vercel/output/static || { echo "Cloudflare Pages bundle missing"; exit 1; }
+          echo "Cloudflare Pages bundle built successfully"
 
   deploy-cloudflare:
-    name: Build & Deploy (Cloudflare Pages)
-    needs: validate
+    name: Deploy to Cloudflare Pages
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && env.HAS_CF_TOKEN == 'true'
+    env:
+      HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
 
     steps:
       - name: Checkout Code
@@ -98,22 +99,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'pnpm'
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Cloudflare Pages Bundle
+      - name: Build Cloudflare Bundle
         run: |
           pnpm build
           pnpm pages:build
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: nexora-pos
-          directory: .vercel/output/static
-          gitBranch: main
+          command: pages deploy .vercel/output/static --project-name=nexora-pos --branch=main
