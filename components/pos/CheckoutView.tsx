@@ -566,6 +566,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 <button
                   onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs"
+                  aria-label="Clear search query"
                 >
                   Clear
                 </button>
@@ -850,6 +851,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                     <button
                       onClick={() => handleUpdateQuantity(item.cartItemId, -1)}
                       className="p-1 text-slate-400 hover:text-white rounded-md hover:bg-slate-800 transition"
+                      aria-label="Decrease quantity"
                     >
                       <Minus className="w-3.5 h-3.5" />
                     </button>
@@ -859,6 +861,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                     <button
                       onClick={() => handleUpdateQuantity(item.cartItemId, 1)}
                       className="p-1 text-slate-400 hover:text-white rounded-md hover:bg-slate-800 transition"
+                      aria-label="Increase quantity"
                     >
                       <Plus className="w-3.5 h-3.5" />
                     </button>
@@ -883,6 +886,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                       onClick={() => handleRemoveItem(item.cartItemId)}
                       className="p-1.5 text-slate-500 hover:text-rose-400 transition ml-1"
                       title="Remove item"
+                      aria-label="Remove item"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
