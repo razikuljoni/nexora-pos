@@ -294,7 +294,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                     <div>
                       <div className="font-bold text-xs text-white">{u.name}</div>
-                      <div className="text-[10px] text-slate-400 font-mono">PIN: {u.pin}</div>
+                      <div className="text-[10px] text-slate-400 font-mono">PIN: ****</div>
                     </div>
                   </div>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-800 text-slate-300">
